@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  postgres-tech-condition:
+    image: postgres:16.0-alpine3.17
+    container_name: tech_condition_postgres
+    environment:
+      POSTGRES_DB: 'tech-condition-service'
+      POSTGRES_USER: 'techconditionserviceuser'
+      POSTGRES_PASSWORD: 'techconditionservicepassword'
+    ports:
+      - "5432:5432"
+#    volumes:
+#      - ./sql:/docker-entrypoint-initdb.d

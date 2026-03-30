@@ -1,0 +1,4 @@
+include:
+  - project: 'sa/devops/ci-templates'
+    ref: main
+    file: 'main.gitlab-ci.yml'

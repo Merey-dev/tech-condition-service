@@ -1,0 +1,56 @@
+image:
+  repository: gitlab.kus.kz:4567
+  tag: latest
+  secret: regcred
+
+vault: true
+
+ingress:
+  enable: false
+  host_kus:
+    production: "auth-service-sa.kus.kz"
+    staging: "auth-service-sa.kus.kz"
+    _default: "example.kus.kz"
+  class_name:
+    production: nginx-internal-infra
+    staging: nginx-internal-infra
+    _default: nginx-internal-infra
+
+
+application:
+  replicaCount: 1
+  health: /actuator/health
+  port: 8025
+  run_command: "./entrypoint.sh"
+  resources:
+    staging:
+      limits:
+        cpu: 400m
+        memory: 1Gi
+      requests:
+        cpu: 50m
+        memory: 210Mi
+    production:
+      limits:
+        cpu: 400m
+        memory: 1Gi
+      requests:
+        cpu: 50m
+        memory: 210Mi
+  autoscaling:
+    enabled: false
+    staging:
+      minReplicas: 1
+      maxReplicas: 3
+    production:
+      minReplicas: 3
+      maxReplicas: 6
+    targetCPUUtilizationPercentage: 60
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+
+
+serviceAccount:
+  name: "vault-auth"

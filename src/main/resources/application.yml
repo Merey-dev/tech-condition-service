@@ -1,0 +1,46 @@
+server:
+  port: ${SERVER_PORT:8043}
+app:
+  database:
+    schema-name: tech_condition_service
+tech-condition:
+  async: ${TECH_CONDITION_ASYNC:true}
+  verify-signed-data: ${TECH_CONDITION_VERIFY_SIGNED_DATA:true}
+  kafka:
+    server-url: ${KAFKA_URL:kafka-bootstrap-staging.kksd.kz:443}
+    credentials: username="${KAFKA_CREDENTIALS_USERNAME:staging-kafka-user-kraft}" password="${KAFKA_CREDENTIALS_PASSWORD:mhZWWHcNZVG81qqMGgsD4tPzlp4gE0bJ}";
+    group-name: ${KAFKA_GROUP_NAME:sa-tech-condition-group-dev}
+    topics:
+      notification: ${NOTIFICATION_IN_TOPIC:sa-all-notification-in-dev}
+      tech-condition:
+        sa-in: ${TECH_CONDITION_TOPICS_SA_IN_TECH_CONDITION:sa-tech-condition-in-dev}
+#        sa-out: ${TECH_CONDITION_TOPICS_SA_OUT_TECH_CONDITION:sa-tech-condition-out-dev}
+        kzharyq-tc-registered-in: ${TECH_CONDITION_KZHARYQ_TC_REGISTERED_IN_TOPIC:sa-tc-kzharyq-tc-registered-in-dev}
+        kzharyq-tc-complete-in: ${TECH_CONDITION_KZHARYQ_TC_COMPLETE_IN:sa-tc-kzharyq-tc-complete-in-dev}
+      renewal:
+        sa-in: ${TECH_CONDITION_TOPICS_SA_IN_RENEWAL:sa-renewal-in-dev}
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  application:
+    name: ${APPLICATION_NAME:tech-condition-service}
+  datasource:
+    url: ${TECH_CONDITION_DATABASE_URL:jdbc:postgresql://localhost:5432/tech-condition-service}
+    driver-class-name: org.postgresql.Driver
+    username: ${TECH_CONDITION_DATABASE_USERNAME:techconditionserviceuser}
+    password: ${TECH_CONDITION_DATABASE_PASSWORD:techconditionservicepassword}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  cloud:
+    consul:
+      host: ${CLOUD_CONSUL_HOST:localhost}
+      port: ${CLOUD_CONSUL_PORT:8500}
+      discovery:
+        instance-id: ${spring.application.name}
+        prefer-ip-address: true
+        health-check-critical-timeout: 2m
+      config:
+        enabled: false
