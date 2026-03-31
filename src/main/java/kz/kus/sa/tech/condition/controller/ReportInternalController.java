@@ -34,4 +34,12 @@ public class ReportInternalController {
     public ResponseEntity<TechConditionDecisionReportDto> getDecisionReportData(@PathVariable UUID id) {
         return ResponseEntity.ok(techConditionReportService.getDecisionReportData(id));
     }
+
+    @GetMapping("/{id}/decision-report/address/{abdAddressId}")
+    @Operation(tags = "TECH CONDITION BLANK", summary = "Данные для решения ТУ по конкретному адресу")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<TechConditionDecisionReportDto> getDecisionReportDataByAddress(@PathVariable UUID id,
+                                                                                         @PathVariable UUID abdAddressId) {
+        return ResponseEntity.ok(techConditionReportService.getDecisionReportDataByAddress(id, abdAddressId));
+    }
 }

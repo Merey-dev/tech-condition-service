@@ -9,6 +9,7 @@ import kz.kus.sa.tech.condition.dto.TechConditionExecuteDto;
 import kz.kus.sa.tech.condition.dto.execution.TechConditionExecutionDto;
 import kz.kus.sa.tech.condition.dto.project.TechConditionProjectCreateDto;
 import kz.kus.sa.tech.condition.dto.project.TechConditionProjectDto;
+import kz.kus.sa.tech.condition.service.tech.condition.TechConditionExecutionAbdAddressDecisionService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionExecutionService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,7 @@ import java.util.UUID;
 public class TechConditionExecutionController {
     
     private final TechConditionExecutionService techConditionExecutionService;
+    private final TechConditionExecutionAbdAddressDecisionService techConditionExecutionAbdAddressDecisionService;
 
     /** Администрирование */
     @GetMapping("/admin")
@@ -102,7 +104,7 @@ public class TechConditionExecutionController {
     @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Исполнение")
     public ResponseEntity<Void> executeApplication(@PathVariable UUID id,
                                                    @RequestBody @Valid TechConditionExecuteDto dto) {
-        techConditionExecutionService.executeApplication(id, dto);
+        techConditionExecutionAbdAddressDecisionService.executeApplication(id, dto);
         return ResponseEntity.noContent().build();
     }
 
@@ -166,14 +168,14 @@ public class TechConditionExecutionController {
     @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование проекта ТУ")
     public TechConditionProjectDto createProject(@PathVariable UUID id, 
                                                  @RequestBody @Valid TechConditionProjectCreateDto dto) {
-        return techConditionExecutionService.createProject(id, dto);
+        return techConditionExecutionAbdAddressDecisionService.createProject(id, dto);
     }
 
     @PatchMapping("/{id}/decision/formation-reasoned-refusal")
     @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование мотивированного отказа")
     public ResponseEntity<Void> formationReasonedFormation(@PathVariable UUID id,
                                                            @RequestBody @Valid TechConditionExecuteDto dto) {
-        techConditionExecutionService.formationReasonedRefusal(id, dto);
+        techConditionExecutionAbdAddressDecisionService.formationReasonedRefusal(id, dto);
         return ResponseEntity.noContent().build();
     }
 
@@ -228,7 +230,7 @@ public class TechConditionExecutionController {
     @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Финальное подписание проекта ТУ или мотивированного отказа") 
     public ResponseEntity<Void> signDecision(@PathVariable UUID id, 
                                              @RequestBody SignCreateDto sign) {
-        techConditionExecutionService.signDecision(id, sign);
+        techConditionExecutionAbdAddressDecisionService.signDecision(id, sign);
         return ResponseEntity.noContent().build();
     }
 }

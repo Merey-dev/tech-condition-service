@@ -10,4 +10,6 @@ public interface TechConditionReportService {
     TechConditionApplicationReportDto applicationReportData(UUID id);
 
     TechConditionDecisionReportDto getDecisionReportData(UUID id);
+
+    TechConditionDecisionReportDto getDecisionReportDataByAddress(UUID executionId, UUID abdAddressId);
 }

@@ -11,6 +11,7 @@ import kz.kus.sa.registry.dto.v1.StatementSignDto;
 import kz.kus.sa.registry.enums.SignedDocType;
 import kz.kus.sa.tech.condition.dao.entity.*;
 import kz.kus.sa.tech.condition.dao.mapper.TechConditionReportMapper;
+import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionAbdAddressDecisionRepository;
 import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionRepository;
 import kz.kus.sa.tech.condition.dto.report.TechConditionApplicationReportDto;
 import kz.kus.sa.tech.condition.dto.report.TechConditionDecisionReportDto;
@@ -31,8 +32,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static kz.kus.commons.enums.ConsumerType.ORGANIZATION;
 import static kz.kus.sa.registry.enums.TechConditionExecutionDecisionType.REASONED_REFUSAL;
@@ -58,6 +59,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     private final TechConditionExecutionRepository techConditionExecutionRepository;
     private final TechConditionPlannedEquipmentService techConditionPlannedEquipmentService;
     private final TechConditionReliabilityCategoryService techConditionReliabilityCategoryService;
+    private final TechConditionExecutionAbdAddressDecisionRepository abdAddressDecisionRepository;
     private final TechConditionContractualCapacityOfTransformerService techConditionContractualCapacityOfTransformerService;
 
     @Override
@@ -128,109 +130,232 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     @Override
-    public TechConditionDecisionReportDto getDecisionReportData(UUID id) {
-        TechConditionExecutionEntity entity = findExecutionById(id);
-        TechConditionEntity techConditionEntity = entity.getTechCondition();
+    public TechConditionDecisionReportDto getDecisionReportData(UUID executionId) {
+        TechConditionExecutionEntity execution = findExecutionById(executionId);
+        TechConditionEntity techCondition = execution.getTechCondition();
 
-        if (isNull(entity.getDecisionType())) {
+        List<TechConditionExecutionAbdAddressDecisionEntity> decisions = abdAddressDecisionRepository.findAllByTechConditionExecutionId(executionId);
+
+        if (decisions.isEmpty()) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
         }
 
+        boolean allTR = decisions.stream()
+                .allMatch(d -> d.getDecisionType() == TECHNICAL_RECOMMENDATION);
+        boolean allRR = decisions.stream()
+                .allMatch(d -> d.getDecisionType() == REASONED_REFUSAL);
+
         HashMap<String, Object> params = new HashMap<>();
-        commonReportService.setBlankHeaderInfo(techConditionEntity.getProviderId(), params);
+        commonReportService.setBlankHeaderInfo(techCondition.getProviderId(), params);
 
-        if (TECHNICAL_RECOMMENDATION == entity.getDecisionType()) {
-            if (isNull(entity.getProject())) {
-                throw new BusinessException(ErrorCode.DECISION_NOT_FORMED.name());
+        if (allTR) {
+            return buildTechRecommendationReport(executionId, techCondition, decisions, params);
+        } else if (allRR) {
+            return buildReasonedRefusalReport(executionId, techCondition, decisions, params);
+        } else {
+            long trCount = decisions.stream()
+                    .filter(d -> d.getDecisionType() == TECHNICAL_RECOMMENDATION).count();
+            long rrCount = decisions.stream()
+                    .filter(d -> d.getDecisionType() == REASONED_REFUSAL).count();
+
+            if (trCount >= rrCount) {
+                return buildTechRecommendationReport(executionId, techCondition,
+                        decisions.stream()
+                                .filter(d -> d.getDecisionType() == TECHNICAL_RECOMMENDATION)
+                                .collect(Collectors.toList()),
+                        params);
+            } else {
+                return buildReasonedRefusalReport(executionId, techCondition,
+                        decisions.stream()
+                                .filter(d -> d.getDecisionType() == REASONED_REFUSAL)
+                                .collect(Collectors.toList()),
+                        params);
             }
-            TechConditionTechRecommendationReportDto techRecommendationDto = techConditionReportMapper.toTechnicalRecommendationReportDto(entity);
-            TechConditionDecisionReportDto dto = techConditionReportMapper.toDecisionReportDto(techRecommendationDto);
-
-            var providerFullName = providerFullName(techConditionEntity.getProviderId());
-            dto.setProviderFullNameRu(providerFullName.get("ru"));
-            dto.setProviderFullNameKk(providerFullName.get("kk"));
-
-            var consumerPhoneAndEmail = consumerPhoneAndEmail(techConditionEntity);
-            dto.setConsumerPhone(consumerPhoneAndEmail.get("phone"));
-            dto.setConsumerEmail(consumerPhoneAndEmail.get("email"));
-
-            var consumerAddress = consumerAddress(techConditionEntity);
-            dto.setConsumerAddressRu(consumerAddress.get("ru"));
-            dto.setConsumerAddressKk(consumerAddress.get("kk"));
-
-            var objectAddressData = objectAddressData(id);
-            dto.setObjectNameRu(objectAddressData.get("objectNameRu"));
-            dto.setObjectNameKk(objectAddressData.get("objectNameKk"));
-            dto.setObjectAddressRu(objectAddressData.get("objectAddressRu"));
-            dto.setObjectAddressKk(objectAddressData.get("objectAddressKk"));
-
-            setSubConsumers(id, params);
-            setReliabilityCategoriesWithKwt(id, params);
-
-            Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getTechConditionReasonCode()))
-                    .ifPresent(d -> {
-                        dto.setReasonRu(d.getNameRu());
-                        dto.setReasonKk(d.getNameKz());
-                    });
-            Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getConsumptionTypeCode()))
-                    .ifPresent(d -> {
-                        dto.setConsumptionTypeRu(d.getNameRu());
-                        dto.setConsumptionTypeKk(d.getNameKz());
-                    });
-            Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getElectricalLoadTypeCode()))
-                    .ifPresent(d -> {
-                        dto.setElectricalLoadTypeRu(d.getNameRu());
-                        dto.setElectricalLoadTypeKk(d.getNameKz());
-                    });
-            Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getServiceTypeCode()))
-                    .ifPresent(d -> {
-                        dto.setServiceTypeRu(d.getNameRu());
-                        dto.setServiceTypeKk(d.getNameKz());
-                    });
-            Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getVoltageLevelCode()))
-                    .ifPresent(d -> {
-                        dto.setVoltageLevelRu(d.getNameRu());
-                        dto.setVoltageLevelKk(d.getNameKz());
-                    });
-
-            commonReportService.setSystemOperatorRequirementFile(techRecommendationDto.getSystemOperatorRequirementFile(), params);
-
-            dto.setSigns(getSignsByIdAndDocType(techConditionEntity.getStatementId(), Collections.singletonList(SignedDocType.TC_PROJECT)));
-            dto.setDecisionType(entity.getDecisionType());
-            dto.setParams(params);
-
-            log.info("REPORT [TECHNICAL RECOMMENDATION]: execution id = [{}], id = [{}]", id, techConditionEntity.getId());
-            return dto;
-        } else if (REASONED_REFUSAL == entity.getDecisionType()) {
-            TechConditionReasonedRefusalReportDto reasonedRefusalDto = techConditionReportMapper.toTechConditionReasonedRefusalReportDto(entity);
-            TechConditionDecisionReportDto dto = techConditionReportMapper.toDecisionReportDto(reasonedRefusalDto);
-
-            var providerFullName = providerFullName(techConditionEntity.getProviderId());
-            dto.setProviderFullNameRu(providerFullName.get("ru"));
-            dto.setProviderFullNameKk(providerFullName.get("kk"));
-
-            var consumerPhoneAndEmail = consumerPhoneAndEmail(techConditionEntity);
-            dto.setConsumerPhone(consumerPhoneAndEmail.get("phone"));
-            dto.setConsumerEmail(consumerPhoneAndEmail.get("email"));
-
-            var consumerAddress = consumerAddress(techConditionEntity);
-            dto.setConsumerAddressRu(consumerAddress.get("ru"));
-            dto.setConsumerAddressKk(consumerAddress.get("kk"));
-
-            var objectAddressData = objectAddressData(id);
-            dto.setObjectNameRu(objectAddressData.get("objectNameRu"));
-            dto.setObjectNameKk(objectAddressData.get("objectNameKk"));
-            dto.setObjectAddressRu(objectAddressData.get("objectAddressRu"));
-            dto.setObjectAddressKk(objectAddressData.get("objectAddressKk"));
-
-            dto.setSigns(getSignsByIdAndDocType(techConditionEntity.getStatementId(), Collections.singletonList(SignedDocType.REASONED_REFUSAL)));
-            dto.setDecisionType(entity.getDecisionType());
-            dto.setParams(params);
-
-            log.info("REPORT [REASONED REFUSAL]: execution id = [{}], id = [{}]", id, techConditionEntity.getId());
-            return dto;
         }
+    }
+
+    @Override
+    public TechConditionDecisionReportDto getDecisionReportDataByAddress(UUID executionId, UUID abdAddressId) {
+        TechConditionExecutionEntity execution = findExecutionById(executionId);
+        TechConditionEntity techCondition = execution.getTechCondition();
+
+        TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
+                .findByTechConditionExecutionIdAndObjectAbdAddressId(executionId, abdAddressId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
+
+        HashMap<String, Object> params = new HashMap<>();
+        commonReportService.setBlankHeaderInfo(techCondition.getProviderId(), params);
+
+        if (decision.getDecisionType() == TECHNICAL_RECOMMENDATION) {
+            return buildTechRecommendationReport(executionId, techCondition, List.of(decision), params);
+        } else if (decision.getDecisionType() == REASONED_REFUSAL) {
+            return buildReasonedRefusalReport(executionId, techCondition, List.of(decision), params);
+        }
+
         throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
+    }
+
+    // ─── BUILD TR REPORT ───────────────────────────────────────────────────
+
+    private TechConditionDecisionReportDto buildTechRecommendationReport(UUID executionId,
+                                                                         TechConditionEntity techCondition,
+                                                                         List<TechConditionExecutionAbdAddressDecisionEntity> decisions,
+                                                                         HashMap<String, Object> params) {
+        TechConditionExecutionAbdAddressDecisionEntity firstDecision = decisions.stream()
+                .filter(d -> nonNull(d.getProject()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.DECISION_NOT_FORMED.name()));
+
+        TechConditionTechRecommendationReportDto techRecommendationDto = techConditionReportMapper.toTechnicalRecommendationReportDto(firstDecision);
+
+        TechConditionDecisionReportDto dto = techConditionReportMapper.toDecisionReportDto(techRecommendationDto);
+
+        fillCommonFields(dto, techCondition);
+
+        var addressData = objectAddressDataFromDecisions(decisions);
+        dto.setObjectNameRu(addressData.get("objectNameRu"));
+        dto.setObjectNameKk(addressData.get("objectNameKk"));
+        dto.setObjectAddressRu(addressData.get("objectAddressRu"));
+        dto.setObjectAddressKk(addressData.get("objectAddressKk"));
+
+        setSubConsumers(techCondition.getId(), params);
+        setReliabilityCategoriesWithKwt(techCondition.getId(), params);
+
+        fillDictionaryFields(dto, techCondition);
+
+        commonReportService.setSystemOperatorRequirementFile(
+                techRecommendationDto.getSystemOperatorRequirementFile(), params);
+
+        dto.setSigns(getSignsByIdAndDocType(
+                techCondition.getStatementId(),
+                Collections.singletonList(SignedDocType.TC_PROJECT)));
+        dto.setDecisionType(TECHNICAL_RECOMMENDATION);
+        dto.setParams(params);
+
+        log.info("REPORT [TECHNICAL RECOMMENDATION]: executionId=[{}], tcId=[{}]",
+                executionId, techCondition.getId());
+
+        return dto;
+    }
+
+    // ─── BUILD RR REPORT ───────────────────────────────────────────────────
+
+    private TechConditionDecisionReportDto buildReasonedRefusalReport(UUID executionId,
+                                                                      TechConditionEntity techCondition,
+                                                                      List<TechConditionExecutionAbdAddressDecisionEntity> decisions,
+                                                                      HashMap<String, Object> params) {
+        TechConditionExecutionAbdAddressDecisionEntity firstDecision = decisions.get(0);
+
+        TechConditionReasonedRefusalReportDto reasonedRefusalDto =
+                techConditionReportMapper.toTechConditionReasonedRefusalReportDto(firstDecision);
+
+        if (decisions.size() > 1) {
+            String regNumbers = decisions.stream()
+                    .map(TechConditionExecutionAbdAddressDecisionEntity
+                            ::getReasonForRefusalRegistrationNumber)
+                    .filter(StringUtils::isNotEmpty)
+                    .collect(Collectors.joining(", "));
+            reasonedRefusalDto.setRegistrationNumber(regNumbers);
+
+            String reasonRu = decisions.stream()
+                    .map(TechConditionExecutionAbdAddressDecisionEntity::getReasonForRefusalRu)
+                    .filter(StringUtils::isNotEmpty)
+                    .distinct()
+                    .collect(Collectors.joining("\n"));
+            reasonedRefusalDto.setReasonForRefusalRu(reasonRu);
+
+            String reasonKk = decisions.stream()
+                    .map(TechConditionExecutionAbdAddressDecisionEntity::getReasonForRefusalKk)
+                    .filter(StringUtils::isNotEmpty)
+                    .distinct()
+                    .collect(Collectors.joining("\n"));
+            reasonedRefusalDto.setReasonForRefusalKk(reasonKk);
+        }
+
+        TechConditionDecisionReportDto dto = techConditionReportMapper.toDecisionReportDto(reasonedRefusalDto);
+
+        fillCommonFields(dto, techCondition);
+
+        var addressData = objectAddressDataFromDecisions(decisions);
+        dto.setObjectNameRu(addressData.get("objectNameRu"));
+        dto.setObjectNameKk(addressData.get("objectNameKk"));
+        dto.setObjectAddressRu(addressData.get("objectAddressRu"));
+        dto.setObjectAddressKk(addressData.get("objectAddressKk"));
+
+        dto.setSigns(getSignsByIdAndDocType(techCondition.getStatementId(), Collections.singletonList(SignedDocType.REASONED_REFUSAL)));
+        dto.setDecisionType(REASONED_REFUSAL);
+        dto.setParams(params);
+
+        log.info("REPORT [REASONED REFUSAL]: executionId=[{}], tcId=[{}]", executionId, techCondition.getId());
+
+        return dto;
+    }
+
+    // ─── ОБЩИЕ МЕТОДЫ ──────────────────────────────────────────────────────
+
+    private void fillCommonFields(TechConditionDecisionReportDto dto, TechConditionEntity techCondition) {
+        var providerFullName = providerFullName(techCondition.getProviderId());
+        dto.setProviderFullNameRu(providerFullName.get("ru"));
+        dto.setProviderFullNameKk(providerFullName.get("kk"));
+
+        var consumerPhoneAndEmail = consumerPhoneAndEmail(techCondition);
+        dto.setConsumerPhone(consumerPhoneAndEmail.get("phone"));
+        dto.setConsumerEmail(consumerPhoneAndEmail.get("email"));
+
+        var consumerAddress = consumerAddress(techCondition);
+        dto.setConsumerAddressRu(consumerAddress.get("ru"));
+        dto.setConsumerAddressKk(consumerAddress.get("kk"));
+    }
+
+    private void fillDictionaryFields(TechConditionDecisionReportDto dto, TechConditionEntity techCondition) {
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getTechConditionReasonCode()))
+                .ifPresent(d -> { dto.setReasonRu(d.getNameRu()); dto.setReasonKk(d.getNameKz()); });
+
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getConsumptionTypeCode()))
+                .ifPresent(d -> { dto.setConsumptionTypeRu(d.getNameRu()); dto.setConsumptionTypeKk(d.getNameKz()); });
+
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getElectricalLoadTypeCode()))
+                .ifPresent(d -> { dto.setElectricalLoadTypeRu(d.getNameRu()); dto.setElectricalLoadTypeKk(d.getNameKz()); });
+
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getServiceTypeCode()))
+                .ifPresent(d -> { dto.setServiceTypeRu(d.getNameRu()); dto.setServiceTypeKk(d.getNameKz()); });
+
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getVoltageLevelCode()))
+                .ifPresent(d -> { dto.setVoltageLevelRu(d.getNameRu()); dto.setVoltageLevelKk(d.getNameKz()); });
+    }
+
+    private Map<String, String> objectAddressDataFromDecisions(List<TechConditionExecutionAbdAddressDecisionEntity> decisions) {
+        Map<String, String> result = new HashMap<>();
+        try {
+            List<AbdAddressEntity> addresses = decisions.stream()
+                    .map(TechConditionExecutionAbdAddressDecisionEntity::getObjectAbdAddress)
+                    .collect(Collectors.toList());
+
+            StringJoiner joinerNameRu = new StringJoiner(", ");
+            StringJoiner joinerNameKk = new StringJoiner(", ");
+            StringJoiner joinerAddressRu = new StringJoiner(", ");
+            StringJoiner joinerAddressKk = new StringJoiner(", ");
+
+            addresses.forEach(a -> {
+                joinerNameRu.add(StringUtils.defaultString(a.getEndUseRu()));
+                joinerNameKk.add(StringUtils.defaultString(a.getEndUseKk()));
+                joinerAddressRu.add(StringUtils.defaultString(a.getLocationRu()));
+                joinerAddressKk.add(StringUtils.defaultString(a.getLocationKk()));
+            });
+
+            result.put("objectNameRu", joinerNameRu.toString());
+            result.put("objectNameKk", joinerNameKk.toString());
+            result.put("objectAddressRu", joinerAddressRu.toString());
+            result.put("objectAddressKk", joinerAddressKk.toString());
+
+        } catch (Exception e) {
+            log.error("Object address from decisions not found: {}", e.getMessage());
+            result.put("objectNameRu", null);
+            result.put("objectNameKk", null);
+            result.put("objectAddressRu", null);
+            result.put("objectAddressKk", null);
+        }
+        return result;
     }
 
     private Map<String, String> providerFullName(UUID providerId) {

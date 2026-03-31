@@ -1,7 +1,6 @@
 package kz.kus.sa.tech.condition.dao.entity;
 
 import com.vladmihalcea.hibernate.type.array.ListArrayType;
-import kz.kus.sa.registry.enums.TechConditionExecutionDecisionType;
 import kz.kus.sa.tech.condition.dao.entity.embedded.ExternalSubdivisionEmbedded;
 import kz.kus.sa.tech.condition.dao.entity.embedded.ExternalUserEmbedded;
 import kz.kus.sa.tech.condition.enums.ExecutionStatus;
@@ -36,13 +35,6 @@ public class TechConditionExecutionEntity extends AbstractAuditingEntity {
     /** Параллельное исполнение */
     @Column(name = "is_parallel")
     private Boolean isParallel;
-
-//    /** РЕШЕНИЕ ПО ИСПОЛНЕНИЮ
-//     * <p>
-//     * Тип решения */
-//    @Enumerated(EnumType.STRING)
-//    @Column(name = "decision_type", length = 50)
-//    private TechConditionExecutionDecisionType decisionType;
 
 
     /** Адреса объектов из АБД */

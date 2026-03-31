@@ -87,7 +87,7 @@ public class KzharyqTechConditionServiceImpl implements KzharyqTechConditionServ
         var consumer = consumerApiService.getConsumer(
                 tc.getConsumerIinBin(),
                 KZH_BIN,
-                kz.kus.commons.enums.ConsumerType.valueOf(tc.getConsumerType().name()));
+                ConsumerType.valueOf(tc.getConsumerType().name()));
         out.setPhones(Collections.singletonList(consumer.getPhone()));
         out.setEmail(consumer.getEmail());
 

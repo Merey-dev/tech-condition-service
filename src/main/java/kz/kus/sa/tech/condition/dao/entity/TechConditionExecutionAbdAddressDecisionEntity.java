@@ -30,10 +30,17 @@ public class TechConditionExecutionAbdAddressDecisionEntity extends AbstractAudi
     @JoinColumn(name = "tech_condition_execution_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tcead_execution"))
     private TechConditionExecutionEntity techConditionExecution;
 
+
     /** Адреса объектов из АБД */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "abd_address_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tcead_abd_address"))
     private AbdAddressEntity objectAbdAddress;
+
+
+    /** Проект ТУ, созданный по данному адресу */
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "project_id", foreignKey = @ForeignKey(name = "fk_tcead_project"))
+    private TechConditionProjectEntity project;
 
 
     /** РЕШЕНИЕ ПО ИСПОЛНЕНИЮ

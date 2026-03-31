@@ -126,7 +126,7 @@ public class AbdAddressEntity extends AbstractAuditingEntity {
     @JoinColumn(name = "tech_condition_executions_id", referencedColumnName = "id", table = "abd_address", foreignKey = @ForeignKey(name = "fk_abd_address_tech_condition_executions"))
     private TechConditionExecutionEntity techConditionExecution;
 
-    @OneToMany(mappedBy = "abdAddress", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "objectAbdAddress", fetch = FetchType.LAZY)
     private List<TechConditionExecutionAbdAddressDecisionEntity> executionDecisions;
 
     @ManyToOne(fetch = FetchType.LAZY)
