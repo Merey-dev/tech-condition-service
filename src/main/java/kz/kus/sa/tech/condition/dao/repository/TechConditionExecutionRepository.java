@@ -23,7 +23,7 @@ public interface TechConditionExecutionRepository extends JpaRepository<TechCond
 
     Boolean existsByTechConditionIdAndDeletedDatetimeIsNullAndStatusCodeIsNot(UUID id, String statusCode);
 
-    @Query(value = "SELECT coalesce(max(e.reasonForRefusalInternalRegistrationNumber), 0) FROM TechConditionExecutionEntity e " +
-            "WHERE e.techCondition.providerId = ?1 AND date_part('year', e.techCondition.applicationDatetime) = ?2")
-    Long getMaxReasonForRefusalInternalRegistrationNumberByOrganizationIdAndYear(UUID organizationId, Integer currentYear);
+//    @Query(value = "SELECT coalesce(max(e.reasonForRefusalInternalRegistrationNumber), 0) FROM TechConditionExecutionEntity e " +
+//            "WHERE e.techCondition.providerId = ?1 AND date_part('year', e.techCondition.applicationDatetime) = ?2")
+//    Long getMaxReasonForRefusalInternalRegistrationNumberByOrganizationIdAndYear(UUID organizationId, Integer currentYear);
 }

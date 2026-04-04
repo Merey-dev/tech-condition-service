@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -93,6 +94,10 @@ public class TechConditionProjectServiceImpl implements TechConditionProjectServ
         if (nonNull(techCondition)) {
             entity.setSource(techCondition.getSource());
             entity.setProviderId(techCondition.getProviderId());
+        }
+
+        if (entity.getObjectAbdAddresses() != null) {
+            entity.setObjectAbdAddresses(new ArrayList<>(entity.getObjectAbdAddresses()));
         }
 
         entity = baseSave(entity);

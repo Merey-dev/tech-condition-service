@@ -38,7 +38,7 @@ public class TechConditionExecutionAbdAddressDecisionEntity extends AbstractAudi
 
 
     /** Проект ТУ, созданный по данному адресу */
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JoinColumn(name = "project_id", foreignKey = @ForeignKey(name = "fk_tcead_project"))
     private TechConditionProjectEntity project;
 

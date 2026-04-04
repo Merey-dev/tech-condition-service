@@ -147,10 +147,8 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         List<TechConditionExecutionAbdAddressDecisionDto> addressDecisions = dto.getAbdAddressDecisions();
 
         if (!isEmpty(addressDecisions)) {
-            // Режим: решение по каждому адресу отдельно
             processAddressDecisions(execution, techCondition, addressDecisions);
         } else {
-            // Режим: одно решение на весь execution (обратная совместимость)
             processSingleDecision(execution, techCondition, dto);
         }
 
@@ -163,11 +161,8 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     private void processAddressDecisions(TechConditionExecutionEntity execution,
                                          TechConditionEntity techCondition,
                                          List<TechConditionExecutionAbdAddressDecisionDto> addressDecisions) {
-
-        // Удаляем старые решения
         deleteAllByExecutionId(execution.getId());
 
-        // Проверяем что все адреса принадлежат этому execution
         List<AbdAddressEntity> executionAddresses = abdAddressRepository.findAllByTechConditionExecutionId(execution.getId());
         Set<UUID> validAddressIds = executionAddresses.stream()
                 .map(AbdAddressEntity::getId)
@@ -196,9 +191,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     private void processSingleDecision(TechConditionExecutionEntity execution,
                                        TechConditionEntity techCondition,
                                        TechConditionExecuteDto dto) {
-
-        // Старая логика — одно решение на весь execution
-        // Создаём по одному Decision на каждый адрес
         List<AbdAddressEntity> addresses = abdAddressRepository.findAllByTechConditionExecutionId(execution.getId());
 
         deleteAllByExecutionId(execution.getId());
@@ -240,15 +232,11 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         TechConditionExecutionEntity execution = findExecutionById(executionId);
         TechConditionEntity techCondition = execution.getTechCondition();
 
-        // Проверяем что по данному адресу (abdAddressId в dto)
-        // есть decision с типом TECHNICAL_RECOMMENDATION
-        UUID abdAddressId = dto.getAbdAddressId(); // НОВОЕ поле в CreateDto
+        UUID abdAddressId = dto.getAbdAddressId();
 
         if (abdAddressId != null) {
-            // Режим: проект для конкретного адреса
             return createProjectForAddress(execution, techCondition, dto, abdAddressId);
         } else {
-            // Старый режим: один проект на весь execution
             return createProjectForExecution(execution, techCondition, dto);
         }
     }
@@ -257,7 +245,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                                                             TechConditionEntity techCondition,
                                                             TechConditionProjectCreateDto dto,
                                                             UUID abdAddressId) {
-        // Находим decision по адресу
         TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
                 .findByTechConditionExecutionIdAndObjectAbdAddressId(execution.getId(), abdAddressId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
@@ -271,17 +258,13 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
 
         checkState(techCondition, Event.TC_FORMATION_PROJECT);
 
-        // Создаём проект, привязанный к адресу
         TechConditionProjectEntity project = techConditionProjectService.create(techCondition, execution, buildProjectEntity(dto, decision));
 
         TechConditionProjectEntity registeredProject = techConditionProjectService.generateRegistrationNumber(project);
 
-        // Привязываем проект к decision (не к execution напрямую)
         decision.setProject(registeredProject);
         abdAddressDecisionRepository.save(decision);
 
-        // Проверяем: если ВСЕ адреса с TECHNICAL_RECOMMENDATION имеют проект
-        // → меняем статус
         checkAndChangeFormationProjectState(techCondition, execution);
 
         log.info("TECH CONDITION [PROJECT CREATED FOR ADDRESS]: executionId=[{}], addressId=[{}], projectId=[{}]",
@@ -308,14 +291,11 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
 
     private TechConditionProjectEntity buildProjectEntity(TechConditionProjectCreateDto dto,
                                                           TechConditionExecutionAbdAddressDecisionEntity decision) {
-
         TechConditionProjectEntity entity = techConditionProjectMapper.toEntity(dto);
 
-        // Заполняем из decision, если в dto не пришло
         AbdAddressEntity address = decision.getObjectAbdAddress();
         TechConditionEntity techCondition = decision.getTechConditionExecution().getTechCondition();
 
-        // Данные из заявления
         if (isNull(entity.getConsumerType())) {
             entity.setConsumerType(techCondition.getConsumerType());
         }
@@ -347,7 +327,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             entity.setTechConditionReasonCode(techCondition.getTechConditionReasonCode());
         }
 
-        // Данные из адреса
         if (isNull(entity.getConnectionPoint()) && StringUtils.isNotEmpty(address.getConnectionPoints())) {
             entity.setConnectionPoint(address.getConnectionPoints());
         }
@@ -355,7 +334,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             entity.setConnectionPointCode(techCondition.getConnectionPointCode());
         }
 
-        // Данные из decision (приоритет — они более специфичны, чем заявление)
         if (StringUtils.isNotEmpty(decision.getConnectionPoints())) {
             entity.setConnectionPointsRu(decision.getConnectionPoints());
             entity.setConnectionPointsKk(decision.getConnectionPoints());
@@ -364,7 +342,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             entity.setMeteringPointCode(decision.getMeteringPointCode());
         }
 
-        // Адреса объектов — только адрес из decision
         entity.setObjectAbdAddresses(List.of(address));
 
         return entity;
@@ -397,13 +374,11 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             throw new BusinessException(ErrorCode.ACCESS_DENIED.name());
         }
 
-        UUID abdAddressId = dto.getAbdAddressId(); // НОВОЕ поле
+        UUID abdAddressId = dto.getAbdAddressId();
 
         if (abdAddressId != null) {
-            // Режим: мотивированный отказ по конкретному адресу
             formationReasonedRefusalForAddress(execution, techCondition, dto, abdAddressId);
         } else {
-            // Старый режим: мотивированный отказ на весь execution
             formationReasonedRefusalForExecution(execution, techCondition, dto);
         }
     }
@@ -415,10 +390,8 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
                 .findByTechConditionExecutionIdAndObjectAbdAddressId(execution.getId(), abdAddressId)
                 .orElseGet(() -> {
-                    // Decision ещё не создан — создаём
                     AbdAddressEntity address = findAddressById(abdAddressId);
-                    TechConditionExecutionAbdAddressDecisionEntity newDecision =
-                            new TechConditionExecutionAbdAddressDecisionEntity();
+                    TechConditionExecutionAbdAddressDecisionEntity newDecision = new TechConditionExecutionAbdAddressDecisionEntity();
                     newDecision.setTechConditionExecution(execution);
                     newDecision.setObjectAbdAddress(address);
                     return newDecision;
@@ -515,15 +488,12 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         techCondition.setDirector(externalUserMapper.fromCurrentUserResponse(currentUser));
         techCondition.setDirectorSignedDatetime(OffsetDateTime.now());
 
-        // Подписываем — решение может быть смешанным (часть адресов ТР, часть МО)
-        // Поэтому генерируем один отчёт с агрегацией всех решений
         TechConditionDecisionReportDto decisionReportData = techConditionReportService.getDecisionReportData(executionId);
         sign.setBase64Data(reportTechConditionApiService.decisionBase64FromDto(executionId, decisionReportData, null));
         registrySignApiService.addProviderSign(techCondition.getStatementId(), sign);
 
         executionChangeState(techCondition, execution, Event.TC_SIGN);
 
-        // Обновляем статусы проектов
         List<TechConditionExecutionAbdAddressDecisionEntity> decisions = findAllByExecutionId(execution.getId());
         decisions.forEach(d -> {
             if (d.getDecisionType() == TECHNICAL_RECOMMENDATION && d.getProject() != null) {
@@ -532,7 +502,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         });
         abdAddressDecisionRepository.saveAll(decisions);
 
-        // Все ли executions подписаны?
         boolean allSigned = !executionRepository.existsByTechConditionIdAndDeletedDatetimeIsNullAndStatusCodeIsNot(
                 techCondition.getId(), ExecutionStatus.SIGNED.getCode());
         if (allSigned) {
@@ -548,17 +517,17 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         kzharyqTechConditionService.sendCompletedRequest(techCondition);
     }
 
-    // ─── ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ────────────────────────────────────────────
+    // ─── PRIVATE ───────────────────────────────────────────────────────────
 
     private void generateRefusalRegistrationNumber(TechConditionExecutionAbdAddressDecisionEntity decision,
                                                    TechConditionEntity techCondition) {
         if (StringUtils.isNotEmpty(decision.getReasonForRefusalRegistrationNumber())) {
-            return; // уже сгенерирован
+            return;
         }
 
         ProviderDto providerDto = providerApiService.getProviderDto(techCondition.getProviderId());
 
-        Long nextNumber = executionRepository.getMaxReasonForRefusalInternalRegistrationNumberByOrganizationIdAndYear(
+        Long nextNumber = abdAddressDecisionRepository.getMaxReasonForRefusalInternalRegistrationNumberByOrganizationIdAndYear(
                 providerDto.getId(), OffsetDateTime.now().getYear()) + 1;
 
         String activityTypeCodes = resolveActivityTypeCodes(providerDto);
@@ -595,7 +564,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
         }
         if (hasAddressDecisions && hasSingleDecision) {
-            throw new BadRequestException("Specify either decisionType or addressDecisions, not both");
+            throw new BadRequestException("Укажите либо decisionType, либо addressDecisions, но не оба одновременно");
         }
     }
 
@@ -667,9 +636,6 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
 
     private void sendNotifications(TechConditionEntity techCondition,
                                    List<TechConditionExecutionAbdAddressDecisionEntity> decisions) {
-        // Определяем итоговый тип решения для уведомления
-        // Если есть хотя бы одна ТР — уведомляем как ТР
-        // Если все МО — уведомляем как МО
         boolean hasTechRecommendation = decisions.stream()
                 .anyMatch(d -> d.getDecisionType() == TECHNICAL_RECOMMENDATION);
         boolean hasReasonedRefusal = decisions.stream()

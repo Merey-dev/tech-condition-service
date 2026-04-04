@@ -160,60 +160,60 @@ public class KzharyqTechConditionServiceImpl implements KzharyqTechConditionServ
     @Override
     public TechConditionCompletedRequestDto getCompletedRequest(TechConditionEntity tc, TechConditionExecutionEntity execution) {
         var out = TechConditionCompletedRequestDto.builder();
-        var project = execution.getProject();
-
-        if (Objects.equals(execution.getDecisionType(), TECHNICAL_RECOMMENDATION)) {
-            kzharyqTechConditionServiceMapper.map(out, project);
-            out.status(TechConditionStatus.valueOf(execution.getDecisionType().name()))
-                    .techConditionRegistrationDate(project.getCreatedDatetime().toLocalDateTime())
-                    .reliabilityCategories(techConditionReliabilityCategoryService.getByTechConditionId(tc.getId()).stream()
-                            .map(e -> ReliabilityCategoryDto.builder()
-                                    .reliabilityCategoryTypeCode(e.getReliabilityCategoryTypeCode())
-                                    .kw(e.getKwt())
-                                    .build())
-                            .collect(Collectors.toList()))
-                    .hasSubConsumers(tc.getHasSubConsumers())
-                    .subConsumers(techConditionSubConsumerService.getByTechConditionId(tc.getId()).stream()
-                            .map(e -> SubConsumerDto.builder()
-                                    .fullName(e.getFullName())
-                                    .powerConsumption(e.getPowerConsumption())
-                                    .build())
-                            .collect(Collectors.toList()))
-                    .installedTransformer(execution.getInstalledTransformer())
-                    .maximumTransformerLoad(execution.getMaximumTransformerLoad())
-                    .existsPlaceInstallMeteringDevice(execution.getExistsPlaceInstallMeteringDevice())
-                    .connectionPointVoltage(execution.getConnectionPointVoltage())
-                    .connectionPointVoltageLevel(execution.getConnectionPointVoltageLevel())
-                    .requiredForConnection(execution.getRequiredForConnection())
-                    .requirementsForOrganizationElectricityMetering(execution.getRequirementsForOrganizationElectricityMetering());
-        } else if (Objects.equals(execution.getDecisionType(), REASONED_REFUSAL)) {
-            out.status(TechConditionStatus.valueOf(execution.getDecisionType().name()))
-                    .refusalReasonCode(execution.getRefusalReasonCode())
-                    .techConditionRegistrationDate(execution.getReasonForRefusalDatetime().toLocalDateTime())
-                    .techConditionRegistrationNumber(execution.getReasonForRefusalRegistrationNumber())
-                    .reasonForRefusalRu(execution.getReasonForRefusalRu())
-                    .reasonForRefusalKk(execution.getReasonForRefusalKk());
-        } else {
-            if (Objects.equals(execution.getStatusCode(), ExecutionStatus.REFUSED_BY_CONSUMER.getCode())) {
-                out.techConditionRegistrationDate(tc.getLastModifiedDatetime().toLocalDateTime())
-                        .status(TechConditionStatus.REFUSED_BY_CONSUMER);
-            } else {
-                log.error("ERROR STATUS FOR SENDING TECH CONDITION TO 1C KZHARYQ [COMPLETED] [{}, {}, {}]",
-                        tc.getId(), tc.getStatusCode(), execution.getStatusCode());
-                throw new BadRequestException("ERROR STATUS FOR SENDING TECH CONDITION TO 1C KZHARYQ [COMPLETED]");
-            }
-        }
-        if (nonNull(execution.getDecisionType())) {
-            out.files(tc.getDocumentsWithTypeCodes().stream()
-                    .map(e -> {
-                        var document = documentApiService.getById(tc.getConsumerIinBin(), e.getDocument());
-                        var fileInfo = fileApiService.getById(UUID.fromString(document.getExternalId()));
-                        return FileDto.builder()
-                                .fileName(fileInfo.getOriginName())
-                                .typeCode(e.getDocumentTypeCode())
-                                .build();
-                    }).collect(Collectors.toList()));
-        }
+//        var project = execution.getProject();
+//
+//        if (Objects.equals(execution.getDecisionType(), TECHNICAL_RECOMMENDATION)) {
+//            kzharyqTechConditionServiceMapper.map(out, project);
+//            out.status(TechConditionStatus.valueOf(execution.getDecisionType().name()))
+//                    .techConditionRegistrationDate(project.getCreatedDatetime().toLocalDateTime())
+//                    .reliabilityCategories(techConditionReliabilityCategoryService.getByTechConditionId(tc.getId()).stream()
+//                            .map(e -> ReliabilityCategoryDto.builder()
+//                                    .reliabilityCategoryTypeCode(e.getReliabilityCategoryTypeCode())
+//                                    .kw(e.getKwt())
+//                                    .build())
+//                            .collect(Collectors.toList()))
+//                    .hasSubConsumers(tc.getHasSubConsumers())
+//                    .subConsumers(techConditionSubConsumerService.getByTechConditionId(tc.getId()).stream()
+//                            .map(e -> SubConsumerDto.builder()
+//                                    .fullName(e.getFullName())
+//                                    .powerConsumption(e.getPowerConsumption())
+//                                    .build())
+//                            .collect(Collectors.toList()))
+//                    .installedTransformer(execution.getInstalledTransformer())
+//                    .maximumTransformerLoad(execution.getMaximumTransformerLoad())
+//                    .existsPlaceInstallMeteringDevice(execution.getExistsPlaceInstallMeteringDevice())
+//                    .connectionPointVoltage(execution.getConnectionPointVoltage())
+//                    .connectionPointVoltageLevel(execution.getConnectionPointVoltageLevel())
+//                    .requiredForConnection(execution.getRequiredForConnection())
+//                    .requirementsForOrganizationElectricityMetering(execution.getRequirementsForOrganizationElectricityMetering());
+//        } else if (Objects.equals(execution.getDecisionType(), REASONED_REFUSAL)) {
+//            out.status(TechConditionStatus.valueOf(execution.getDecisionType().name()))
+//                    .refusalReasonCode(execution.getRefusalReasonCode())
+//                    .techConditionRegistrationDate(execution.getReasonForRefusalDatetime().toLocalDateTime())
+//                    .techConditionRegistrationNumber(execution.getReasonForRefusalRegistrationNumber())
+//                    .reasonForRefusalRu(execution.getReasonForRefusalRu())
+//                    .reasonForRefusalKk(execution.getReasonForRefusalKk());
+//        } else {
+//            if (Objects.equals(execution.getStatusCode(), ExecutionStatus.REFUSED_BY_CONSUMER.getCode())) {
+//                out.techConditionRegistrationDate(tc.getLastModifiedDatetime().toLocalDateTime())
+//                        .status(TechConditionStatus.REFUSED_BY_CONSUMER);
+//            } else {
+//                log.error("ERROR STATUS FOR SENDING TECH CONDITION TO 1C KZHARYQ [COMPLETED] [{}, {}, {}]",
+//                        tc.getId(), tc.getStatusCode(), execution.getStatusCode());
+//                throw new BadRequestException("ERROR STATUS FOR SENDING TECH CONDITION TO 1C KZHARYQ [COMPLETED]");
+//            }
+//        }
+//        if (nonNull(execution.getDecisionType())) {
+//            out.files(tc.getDocumentsWithTypeCodes().stream()
+//                    .map(e -> {
+//                        var document = documentApiService.getById(tc.getConsumerIinBin(), e.getDocument());
+//                        var fileInfo = fileApiService.getById(UUID.fromString(document.getExternalId()));
+//                        return FileDto.builder()
+//                                .fileName(fileInfo.getOriginName())
+//                                .typeCode(e.getDocumentTypeCode())
+//                                .build();
+//                    }).collect(Collectors.toList()));
+//        }
         return out.build();
     }
 
