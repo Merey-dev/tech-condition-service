@@ -25,10 +25,12 @@ import kz.kus.sa.tech.condition.dao.entity.TechConditionEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionEntity;
 import kz.kus.sa.tech.condition.dao.mapper.*;
+import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionAbdAddressDecisionRepository;
 import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionRepository;
 import kz.kus.sa.tech.condition.dao.repository.TechConditionRepository;
 import kz.kus.sa.tech.condition.dto.ChangeAssigneeDto;
 import kz.kus.sa.tech.condition.dto.execution.TechConditionExecutionDto;
+import kz.kus.sa.tech.condition.enums.AbdAddressDecisionStatus;
 import kz.kus.sa.tech.condition.enums.ExecutionStatus;
 import kz.kus.sa.tech.condition.enums.TechConditionExecutionType;
 import kz.kus.sa.tech.condition.exception.BadRequestException;
@@ -103,6 +105,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
     private final TechConditionExecutionStatemachine techConditionExecutionStatemachine;
     private final TechConditionExecutionAbdAddressDecisionService abdAddressDecisionService;
+    private final TechConditionExecutionAbdAddressDecisionRepository abdAddressDecisionRepository;
 
     @Override
     public Page<TechConditionExecutionDto> getAllForAdmin(String searchText,
@@ -126,6 +129,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
             TechConditionExecutionEntity entity = findById(id);
             TechConditionEntity techConditionEntity = entity.getTechCondition();
 
+            // обновляем execution
             checkState(techConditionEntity, Event.CHANGE_ASSIGNEE);
 
             if (isNotEmpty(entity.getAssignees())) {
@@ -160,6 +164,22 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
                 log.info("TECH CONDITION [ADMIN CHANGED ASSIGNEE]: id = [{}], execution id = [{}], new assignee userId = [{}]",
                         techConditionEntity.getId(), entity.getId(), dto.getUserId());
                 baseSave(entity);
+
+                // обновляем decisions которые не в финальном статусе
+                List<TechConditionExecutionAbdAddressDecisionEntity> decisions = abdAddressDecisionRepository.findAllByTechConditionExecutionId(id);
+                decisions.stream()
+                        .filter(d -> !d.getStatusCode().equals(AbdAddressDecisionStatus.SIGNED.getCode()))
+                        .forEach(d -> {
+                            d.setAssignees(List.of(dto.getUserId()));
+                            Set<UUID> decisionRelatedUsers = new HashSet<>(
+                                    Optional.ofNullable(d.getAssignees()).orElse(new ArrayList<>()));
+                            decisionRelatedUsers.add(dto.getUserId());
+                            d.setRelatedUsers(new ArrayList<>(decisionRelatedUsers));
+                            abdAddressDecisionRepository.save(d);
+                        });
+
+                log.info("TECH CONDITION [ADMIN CHANGED ASSIGNEE]: id=[{}], executionId=[{}], userId=[{}]",
+                        techConditionEntity.getId(), entity.getId(), dto.getUserId());
 
                 notificationService.send(userDto.getEmail(), String.format(
                         NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME,

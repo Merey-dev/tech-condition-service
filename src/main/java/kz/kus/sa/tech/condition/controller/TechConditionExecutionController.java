@@ -112,20 +112,20 @@ public class TechConditionExecutionController {
     }
 
     /** Проект ТУ или мотивированный отказ */
-    @PostMapping("/{id}/decision/project")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование проекта ТУ")
-    public TechConditionProjectDto createProject(@PathVariable UUID id,
+    @PostMapping("/decisions/{decisionId}/project")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Формирование проекта ТУ")
+    public TechConditionProjectDto createProject(@PathVariable UUID decisionId,
                                                  @RequestBody @Valid TechConditionProjectCreateDto dto) {
-        return techConditionExecutionAbdAddressDecisionService.createProject(id, dto);
+        return techConditionExecutionAbdAddressDecisionService.createProject(decisionId, dto);
     }
 
-    @PatchMapping("/{id}/decision/formation-reasoned-refusal")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование мотивированного отказа")
-    public ResponseEntity<Void> formationReasonedRefusal(@PathVariable UUID id,
-                                                         @RequestBody @Valid TechConditionExecuteDto dto) {
-        techConditionExecutionAbdAddressDecisionService.formationReasonedRefusal(id, dto);
-        return ResponseEntity.noContent().build();
-    }
+//    @PatchMapping("/{id}/decision/formation-reasoned-refusal")
+//    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование мотивированного отказа")
+//    public ResponseEntity<Void> formationReasonedRefusal(@PathVariable UUID id,
+//                                                         @RequestBody @Valid TechConditionExecuteDto dto) {
+//        techConditionExecutionAbdAddressDecisionService.formationReasonedRefusal(id, dto);
+//        return ResponseEntity.noContent().build();
+//    }
 
     @PatchMapping("/{id}/execute-application")
     @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Исполнение")
@@ -163,6 +163,13 @@ public class TechConditionExecutionController {
     @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Согласование решения")
     public ResponseEntity<Void> approveDecision(@PathVariable UUID decisionId) {
         techConditionExecutionAbdAddressDecisionService.approve(decisionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/decisions/{decisionId}/withdraw")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Отозвать решение")
+    public ResponseEntity<Void> withdrawDecision(@PathVariable UUID decisionId) {
+        techConditionExecutionAbdAddressDecisionService.withdraw(decisionId);
         return ResponseEntity.noContent().build();
     }
 

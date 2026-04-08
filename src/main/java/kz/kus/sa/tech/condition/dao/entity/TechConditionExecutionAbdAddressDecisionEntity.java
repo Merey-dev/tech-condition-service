@@ -160,6 +160,11 @@ public class TechConditionExecutionAbdAddressDecisionEntity extends AbstractAudi
     @Column(name = "assignees", columnDefinition = "uuid[]")
     private List<UUID> assignees;
 
+    /** Связанные пользователи */
+    @Type(type = "list-array")
+    @Column(name = "related_users", columnDefinition = "uuid[]",  nullable = false)
+    private List<UUID> relatedUsers;
+
     /** Статус */
     @Column(name = "status_code")
     private String statusCode = AbdAddressDecisionStatus.ASSIGNED.getCode();

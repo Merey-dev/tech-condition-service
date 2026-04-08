@@ -4,7 +4,6 @@ import kz.kus.sa.registry.dto.common.AssignDto;
 import kz.kus.sa.registry.dto.common.SignCreateDto;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dto.TechConditionExecuteDto;
-import kz.kus.sa.tech.condition.dto.execution.TechConditionExecutionAbdAddressDecisionDto;
 import kz.kus.sa.tech.condition.dto.project.TechConditionProjectCreateDto;
 import kz.kus.sa.tech.condition.dto.project.TechConditionProjectDto;
 
@@ -15,15 +14,13 @@ public interface TechConditionExecutionAbdAddressDecisionService {
 
     void assign(UUID executionId, AssignDto dto);
 
-    void saveAll(UUID executionId, List<TechConditionExecutionAbdAddressDecisionDto> dtos);
-
-    void replaceAll(UUID executionId, List<TechConditionExecutionAbdAddressDecisionDto> dtos);
-
     List<TechConditionExecutionAbdAddressDecisionEntity> findAllByExecutionId(UUID executionId);
 
-    TechConditionExecutionAbdAddressDecisionEntity findByExecutionIdAndAbdAddressId(UUID executionId, UUID abdAddressId);
+    void executeApplication(UUID executionId, TechConditionExecuteDto dto);
 
-    void deleteAllByExecutionId(UUID executionId);
+    TechConditionProjectDto createProject(UUID decisionId, TechConditionProjectCreateDto dto);
+
+//    void formationReasonedRefusal(UUID executionId, TechConditionExecuteDto dto);
 
     // методы переехавшие из TechConditionExecutionService
     void takeToExecution(UUID decisionId);
@@ -34,16 +31,11 @@ public interface TechConditionExecutionAbdAddressDecisionService {
 
     void approve(UUID decisionId);
 
+    void withdraw(UUID decisionId);
+
     void sendForSign(UUID decisionId, AssignDto dto);
 
     void approveAndSendForSign(UUID decisionId, AssignDto dto);
 
     void sign(UUID decisionId, SignCreateDto sign);
-
-    // методы которые были в AbdAddressDecisionService
-    void executeApplication(UUID executionId, TechConditionExecuteDto dto);
-
-    TechConditionProjectDto createProject(UUID executionId, TechConditionProjectCreateDto dto);
-
-    void formationReasonedRefusal(UUID executionId, TechConditionExecuteDto dto);
 }

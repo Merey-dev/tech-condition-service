@@ -28,113 +28,151 @@ public class TechConditionExecutionStatemachine extends StateConfig<String, Even
 
         // Статус "Назначен"
         stateBuilder.state(ExecutionStatus.ASSIGNED.getCode())
+                .event(Event.TCE_TAKE_TO_EXECUTION).targetState(ExecutionStatus.ON_EXECUTION.getCode())
+                .action(this::setState)
+                .guard((entity, execution) -> isExecutor(execution))
+
+                .and()
                 .event(Event.ASSIGN_TO_DIVISION)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isAssignor(execution))
 
                 .and()
                 .event(Event.ASSIGN_TO_EXECUTOR)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isAssignor(execution))
 
                 .and()
                 .event(Event.ASSIGN_TO_DIVISION_WITH_ADDRESS)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isAssignor(execution))
 
                 .and()
                 .event(Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isAssignor(execution))
 
                 .and()
-                .event(Event.TCE_TAKE_TO_EXECUTION).targetState(ExecutionStatus.ON_EXECUTION.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution) && isApplication(execution));
+                .event(Event.CHANGE_ASSIGNEE)
+                .action(this::saveHistory);
 
         // Статус "На исполнении"
         stateBuilder.state(ExecutionStatus.ON_EXECUTION.getCode())
-                .event(Event.ASSIGN_TO_DIVISION).targetState(ExecutionStatus.ASSIGNED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
-
-                .and()
-                .event(Event.ASSIGN_TO_EXECUTOR).targetState(ExecutionStatus.ASSIGNED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
-
-                .and()
-                .event(Event.ASSIGN_TO_DIVISION_WITH_ADDRESS).targetState(ExecutionStatus.ASSIGNED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
-
-                .and()
-                .event(Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS).targetState(ExecutionStatus.ASSIGNED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
-
-                .and()
-                .event(Event.EXECUTE)
-                .action(this::saveHistory)
-                .guard((entity, execution) -> isExecutor(execution))
-
-                .and()
-                .event(Event.TCE_SEND_FOR_APPROVAL).targetState(ExecutionStatus.UNDER_APPROVAL.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecuted(execution))
-
-                // когда исполняет начальник, сразу согласовывает сам
-                .and()
-                .event(Event.TCE_APPROVE).targetState(ExecutionStatus.APPROVED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution) && isExecuted(execution));
-
-        // Статус "Возвращено на доработку"
-        stateBuilder.state(ExecutionStatus.RETURNED_FOR_REVISION.getCode())
-                .event(Event.TCE_APPROVE).targetState(ExecutionStatus.APPROVED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution))
-
-                .and()
-                .event(Event.EXECUTE)
-                .action(this::saveHistory)
-                .guard((entity, execution) -> isExecutor(execution))
-
-                .and()
-                .event(Event.TCE_SEND_FOR_APPROVAL).targetState(ExecutionStatus.UNDER_APPROVAL.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution));
-
-        // Статус "На согласовании"
-        stateBuilder.state(ExecutionStatus.UNDER_APPROVAL.getCode())
-                .event(Event.TCE_SEND_FOR_REVISION).targetState(ExecutionStatus.RETURNED_FOR_REVISION.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution))
-
-                .and()
-                .event(Event.TCE_APPROVE).targetState(ExecutionStatus.APPROVED.getCode())
-                .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution))
-
-                .and()
-                .event(Event.TCE_WITHDRAW)
-                .action(this::saveHistory)
-                .guard((entity, execution) -> !isApproved(execution));
-
-        // Статус "Утвержден"
-        stateBuilder.state(ExecutionStatus.APPROVED.getCode())
-                .event(Event.TCE_SEND_FOR_REVISION).targetState(ExecutionStatus.RETURNED_FOR_REVISION.getCode())
-                .action(this::setState)
-
-                .and()
-                .event(Event.TCE_TAKE_TO_EXECUTION)
-                .action(this::saveHistory)
-                .guard((entity, execution) -> isExecutor(execution) && isMainExecutorNull(entity))
-
-                .and()
                 .event(Event.TC_SIGN).targetState(ExecutionStatus.SIGNED.getCode())
                 .action(this::setState)
-                .guard((entity, execution) -> isExecutor(execution));
+
+                .and()
+                .event(Event.CHANGE_ASSIGNEE)
+                .action(this::saveHistory);
+
+        // Статус "Подписан"
+        stateBuilder.state(ExecutionStatus.SIGNED.getCode());
+
+//        // Статус "Назначен"
+//        stateBuilder.state(ExecutionStatus.ASSIGNED.getCode())
+//                .event(Event.ASSIGN_TO_DIVISION)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isAssignor(execution))
+//
+//                .and()
+//                .event(Event.ASSIGN_TO_EXECUTOR)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isAssignor(execution))
+//
+//                .and()
+//                .event(Event.ASSIGN_TO_DIVISION_WITH_ADDRESS)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isAssignor(execution))
+//
+//                .and()
+//                .event(Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isAssignor(execution))
+//
+//                .and()
+//                .event(Event.TCE_TAKE_TO_EXECUTION).targetState(ExecutionStatus.ON_EXECUTION.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution) && isApplication(execution));
+//
+//        // Статус "На исполнении"
+//        stateBuilder.state(ExecutionStatus.ON_EXECUTION.getCode())
+//                .event(Event.ASSIGN_TO_DIVISION).targetState(ExecutionStatus.ASSIGNED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
+//
+//                .and()
+//                .event(Event.ASSIGN_TO_EXECUTOR).targetState(ExecutionStatus.ASSIGNED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
+//
+//                .and()
+//                .event(Event.ASSIGN_TO_DIVISION_WITH_ADDRESS).targetState(ExecutionStatus.ASSIGNED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
+//
+//                .and()
+//                .event(Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS).targetState(ExecutionStatus.ASSIGNED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution) && !isExecuted(execution))
+//
+//                .and()
+//                .event(Event.EXECUTE)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isExecutor(execution))
+//
+//                .and()
+//                .event(Event.TCE_SEND_FOR_APPROVAL).targetState(ExecutionStatus.UNDER_APPROVAL.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecuted(execution))
+//
+//                // когда исполняет начальник, сразу согласовывает сам
+//                .and()
+//                .event(Event.TCE_APPROVE).targetState(ExecutionStatus.APPROVED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution) && isExecuted(execution));
+//
+//        // Статус "Возвращено на доработку"
+//        stateBuilder.state(ExecutionStatus.RETURNED_FOR_REVISION.getCode())
+//                .event(Event.TCE_APPROVE).targetState(ExecutionStatus.APPROVED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution))
+//
+//                .and()
+//                .event(Event.EXECUTE)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isExecutor(execution))
+//
+//                .and()
+//                .event(Event.TCE_SEND_FOR_APPROVAL).targetState(ExecutionStatus.UNDER_APPROVAL.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution));
+//
+//        // Статус "На согласовании"
+//        stateBuilder.state(ExecutionStatus.UNDER_APPROVAL.getCode())
+//                .event(Event.TCE_SEND_FOR_REVISION).targetState(ExecutionStatus.RETURNED_FOR_REVISION.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution))
+//
+//                .and()
+//                .event(Event.TCE_APPROVE).targetState(ExecutionStatus.APPROVED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution))
+//
+//                .and()
+//                .event(Event.TCE_WITHDRAW)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> !isApproved(execution));
+//
+//        // Статус "Утвержден"
+//        stateBuilder.state(ExecutionStatus.APPROVED.getCode())
+//                .event(Event.TCE_SEND_FOR_REVISION).targetState(ExecutionStatus.RETURNED_FOR_REVISION.getCode())
+//                .action(this::setState)
+//
+//                .and()
+//                .event(Event.TCE_TAKE_TO_EXECUTION)
+//                .action(this::saveHistory)
+//                .guard((entity, execution) -> isExecutor(execution) && isMainExecutorNull(entity))
+//
+//                .and()
+//                .event(Event.TC_SIGN).targetState(ExecutionStatus.SIGNED.getCode())
+//                .action(this::setState)
+//                .guard((entity, execution) -> isExecutor(execution));
     }
 
     private void setState(TechConditionEntity entity, TechConditionExecutionEntity execution, String state, Event event) {

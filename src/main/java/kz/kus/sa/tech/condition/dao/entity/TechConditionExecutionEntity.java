@@ -53,13 +53,13 @@ public class TechConditionExecutionEntity extends AbstractAuditingEntity {
     @Column(name = "revision_reason", columnDefinition = "text")
     private String revisionReason;
 
-    /** Быстрый отказ */
-    @Column(name = "quick_refusal")
-    private boolean quickRefusal;
+//    /** Быстрый отказ */
+//    @Column(name = "quick_refusal")
+//    private boolean quickRefusal;
 
-    /** Дата / время исполнения */
-    @Column(name = "executed_datetime", columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime executedDatetime;
+//    /** Дата / время исполнения */
+//    @Column(name = "executed_datetime", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+//    private OffsetDateTime executedDatetime;
 
 
     @ManyToOne(fetch = FetchType.EAGER)
