@@ -56,7 +56,7 @@ public interface TechConditionExecutionService {
 
     void assign(UUID id, AssignDto dto);
 
-    @Deprecated
+    /*@Deprecated
     void reAssign(UUID id, AssignDto dto);
 
     void assignForApproval(UUID id, AssignDto dto);
@@ -82,5 +82,5 @@ public interface TechConditionExecutionService {
 
     TechConditionEntity approveDecision(UUID id);
 
-    void approveDecisionAndSendForSign(UUID id, AssignDto dto);
+    void approveDecisionAndSendForSign(UUID id, AssignDto dto);*/
 }

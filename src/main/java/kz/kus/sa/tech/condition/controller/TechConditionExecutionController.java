@@ -39,16 +39,18 @@ public class TechConditionExecutionController {
     /** Администрирование */
     @GetMapping("/admin")
     @Operation(tags = "TECH-CONDITION ADMIN", summary = "Админка: Список исполнении по заявлениям")
-    public Page<TechConditionExecutionDto> getAllForAdmin(@RequestParam(required = false) String searchText,
-                                                          @RequestParam(required = false) List<String> statuses,
-                                                          @RequestParam(required = false) List<String> statementStatuses,
-                                                          @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateFrom,
-                                                          @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateTo,
-                                                          @RequestParam(required = false) Source source,
-                                                          @RequestParam(required = false) UUID userId,
-                                                          @RequestParam(required = false) UUID providerId,
-                                                          Pageable pageable) {
-        return techConditionExecutionService.getAllForAdmin(searchText, statuses, statementStatuses, dateFrom, dateTo, source, userId, providerId, pageable);
+    public Page<TechConditionExecutionDto> getAllForAdmin(
+            @RequestParam(required = false) String searchText,
+            @RequestParam(required = false) List<String> statuses,
+            @RequestParam(required = false) List<String> statementStatuses,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateTo,
+            @RequestParam(required = false) Source source,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) UUID providerId,
+            Pageable pageable) {
+        return techConditionExecutionService.getAllForAdmin(searchText, statuses, statementStatuses,
+                dateFrom, dateTo, source, userId, providerId, pageable);
     }
 
     @PatchMapping("/admin/change-assignee")
@@ -58,19 +60,20 @@ public class TechConditionExecutionController {
         return ResponseEntity.noContent().build();
     }
 
-
     /** Лист исполнения */
     @GetMapping
     @Operation(tags = "TECH-CONDITION EXECUTION", summary = "Список исполнении по заявлениям")
-    public Page<TechConditionExecutionDto> getAll(@RequestParam(required = false) String searchText,
-                                                  @RequestParam(required = false) List<String> statuses,
-                                                  @RequestParam(required = false) List<String> statementStatuses,
-                                                  @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateFrom,
-                                                  @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateTo,
-                                                  @RequestParam(required = false) Source source,
-                                                  @RequestParam(required = false) UUID userId,
-                                                  Pageable pageable) {
-        return techConditionExecutionService.getAll(searchText, statuses, statementStatuses, dateFrom, dateTo, source, userId, pageable);
+    public Page<TechConditionExecutionDto> getAll(
+            @RequestParam(required = false) String searchText,
+            @RequestParam(required = false) List<String> statuses,
+            @RequestParam(required = false) List<String> statementStatuses,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd.MM.yyyy") LocalDate dateTo,
+            @RequestParam(required = false) Source source,
+            @RequestParam(required = false) UUID userId,
+            Pageable pageable) {
+        return techConditionExecutionService.getAll(searchText, statuses, statementStatuses,
+                dateFrom, dateTo, source, userId, pageable);
     }
 
     @GetMapping("/{id}")
@@ -80,23 +83,47 @@ public class TechConditionExecutionController {
     }
 
     @GetMapping("/{techConditionId}/executions")
-    @Operation(tags = "TECH-CONDITION EXECUTION", summary = "Список исполнении к заявлению на выдачу ТУ (Pageable)")
-    public Page<TechConditionExecutionDto> getExecutions(@PathVariable UUID techConditionId, Pageable pageable) {
+    @Operation(tags = "TECH-CONDITION EXECUTION", summary = "Список исполнении к заявлению (Pageable)")
+    public Page<TechConditionExecutionDto> getExecutions(@PathVariable UUID techConditionId,
+                                                         Pageable pageable) {
         return techConditionExecutionService.findAllByTechConditionId(techConditionId, pageable);
     }
 
     @GetMapping("/{techConditionId}/executions-list")
-    @Operation(tags = "TECH-CONDITION EXECUTION", summary = "Список исполнении к заявлению на выдачу ТУ (List)")
-    public List<TechConditionExecutionDto> getExecutions(@PathVariable UUID techConditionId) {
+    @Operation(tags = "TECH-CONDITION EXECUTION", summary = "Список исполнении к заявлению (List)")
+    public List<TechConditionExecutionDto> getExecutionsList(@PathVariable UUID techConditionId) {
         return techConditionExecutionService.findAllByTechConditionIdList(techConditionId);
     }
 
-
     @PatchMapping("/{id}/take-to-execution")
     @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Взятие на исполнение")
-    public ResponseEntity<Void> takeToExecution(@PathVariable UUID id, 
+    public ResponseEntity<Void> takeToExecution(@PathVariable UUID id,
                                                 @RequestBody @Valid AssignDto dto) {
         techConditionExecutionService.takeToExecution(id, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/assign")
+    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Назначение исполнение")
+    public ResponseEntity<Void> assign(@PathVariable UUID id,
+                                       @RequestBody @Valid AssignDto assignDto) {
+        techConditionExecutionService.assign(id, assignDto);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Проект ТУ или мотивированный отказ */
+    @PostMapping("/{id}/decision/project")
+    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование проекта ТУ")
+    public TechConditionProjectDto createProject(@PathVariable UUID id,
+                                                 @RequestBody @Valid TechConditionProjectCreateDto dto) {
+        return techConditionExecutionAbdAddressDecisionService.createProject(id, dto);
+    }
+
+    @PatchMapping("/{id}/decision/formation-reasoned-refusal")
+    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование мотивированного отказа")
+    public ResponseEntity<Void> formationReasonedRefusal(@PathVariable UUID id,
+                                                         @RequestBody @Valid TechConditionExecuteDto dto) {
+        techConditionExecutionAbdAddressDecisionService.formationReasonedRefusal(id, dto);
         return ResponseEntity.noContent().build();
     }
 
@@ -108,129 +135,58 @@ public class TechConditionExecutionController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/assign")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Назначение исполнение")
-    public ResponseEntity<Void> assign(@PathVariable UUID id, 
-                                       @RequestBody @Valid AssignDto assignDto) {
-        techConditionExecutionService.assign(id, assignDto);
+    /** Decision события */
+    @PatchMapping("/decisions/{decisionId}/take-to-execution")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Взятие в работу решения по адресу")
+    public ResponseEntity<Void> takeDecisionToExecution(@PathVariable UUID decisionId) {
+        techConditionExecutionAbdAddressDecisionService.takeToExecution(decisionId);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/assign-for-approval")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Назначить на согласование")
-    public ResponseEntity<Void> assignForApproval(@PathVariable UUID id, 
-                                                  @RequestBody @Valid AssignDto assignDto) {
-        techConditionExecutionService.assignForApproval(id, assignDto);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/send-for-revision")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Отправка исполнение на доработку")
-    public ResponseEntity<Void> sendForRevision(@PathVariable UUID id,
-                                                @RequestParam @NotBlank String reason) {
-        techConditionExecutionService.sendForRevision(id, reason);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/approve")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Согласовать исполнение")
-    public ResponseEntity<Void> approve(@PathVariable UUID id) {
-        techConditionExecutionService.approve(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/assign-for-sign")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Назначить на утверждение")
-    public ResponseEntity<Void> assignForSign(@PathVariable UUID id,
-                                              @RequestBody @Valid AssignDto assignDto) {
-        techConditionExecutionService.assignForSign(id, assignDto);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/withdraw")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Отозвать исполнение")
-    public ResponseEntity<Void> withdraw(@PathVariable UUID id){
-        techConditionExecutionService.withdraw(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/assign-parallel")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Назначение на параллельное исполнение")
-    public ResponseEntity<Void> assignParallel(@PathVariable UUID id, 
-                                               @RequestBody @Valid AssignDto assignDto) {
-        techConditionExecutionService.assignParallel(id, assignDto);
-        return ResponseEntity.noContent().build();
-    }
-
-    
-    /** Проект ТУ или мотивированный отказ */
-    @PostMapping("/{id}/decision/project")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование проекта ТУ")
-    public TechConditionProjectDto createProject(@PathVariable UUID id, 
-                                                 @RequestBody @Valid TechConditionProjectCreateDto dto) {
-        return techConditionExecutionAbdAddressDecisionService.createProject(id, dto);
-    }
-
-    @PatchMapping("/{id}/decision/formation-reasoned-refusal")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Формирование мотивированного отказа")
-    public ResponseEntity<Void> formationReasonedFormation(@PathVariable UUID id,
-                                                           @RequestBody @Valid TechConditionExecuteDto dto) {
-        techConditionExecutionAbdAddressDecisionService.formationReasonedRefusal(id, dto);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/decision/send-for-approval")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Отправить на согласование заявку на выдачу ТУ") 
-    public ResponseEntity<Void> sendDecisionForApproval(@PathVariable UUID id, 
-                                                        @RequestParam UUID userId) {
-        techConditionExecutionService.sendDecisionForApproval(id, userId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/decision/re-send-for-approval")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Переназначить на согласование заявку на выдачу ТУ") 
-    public ResponseEntity<Void> reSendDecisionForApproval(@PathVariable UUID id, 
-                                                          @RequestParam UUID userId) {
-        techConditionExecutionService.reSendDecisionForApproval(id, userId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/{id}/decision/send-for-revision")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Отправка решение на доработку")
-    public ResponseEntity<Void> sendDecisionForRevision(@PathVariable UUID id,
+    @PatchMapping("/decisions/{decisionId}/send-for-revision")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Отправка решения на доработку")
+    public ResponseEntity<Void> sendDecisionForRevision(@PathVariable UUID decisionId,
                                                         @RequestParam @NotBlank String reason) {
-        techConditionExecutionService.sendDecisionForRevision(id, reason);
+        techConditionExecutionAbdAddressDecisionService.sendForRevision(decisionId, reason);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/decision/send-for-sign")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Отправить на подписание заявку на выдачу ТУ") 
-    public ResponseEntity<Void> sendDecisionForSign(@PathVariable UUID id,
-                                                    @RequestBody @Valid AssignDto assignDto) {
-        techConditionExecutionService.assignDecisionForSign(id, assignDto);
+    @PatchMapping("/decisions/{decisionId}/send-for-approval")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Отправка решения на согласование")
+    public ResponseEntity<Void> sendDecisionForApproval(@PathVariable UUID decisionId,
+                                                        @RequestBody @Valid AssignDto dto) {
+        techConditionExecutionAbdAddressDecisionService.sendForApproval(decisionId, dto);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/decision/approve")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Согласование заявки на выдачу ТУ") 
-    public ResponseEntity<Void> approveDecision(@PathVariable UUID id) {
-        techConditionExecutionService.approveDecision(id);
+    @PatchMapping("/decisions/{decisionId}/approve")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Согласование решения")
+    public ResponseEntity<Void> approveDecision(@PathVariable UUID decisionId) {
+        techConditionExecutionAbdAddressDecisionService.approve(decisionId);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/decision/approve-and-send-for-sign")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Согласование решения по заявке и отправить на подписание") 
-    public ResponseEntity<Void> approveDecisionAndSendForSign(@PathVariable UUID id,
-                                                              @RequestBody @Valid AssignDto assignDto) {
-        techConditionExecutionService.approveDecisionAndSendForSign(id, assignDto);
+    @PatchMapping("/decisions/{decisionId}/send-for-sign")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Отправка решения на подписание")
+    public ResponseEntity<Void> sendDecisionForSign(@PathVariable UUID decisionId,
+                                                    @RequestBody @Valid AssignDto dto) {
+        techConditionExecutionAbdAddressDecisionService.sendForSign(decisionId, dto);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/decision/sign")
-    @Operation(tags = "TECH-CONDITION EXECUTION EVENTS", summary = "Финальное подписание проекта ТУ или мотивированного отказа") 
-    public ResponseEntity<Void> signDecision(@PathVariable UUID id, 
+    @PatchMapping("/decisions/{decisionId}/approve-and-send-for-sign")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Согласование и отправка на подписание")
+    public ResponseEntity<Void> approveDecisionAndSendForSign(@PathVariable UUID decisionId,
+                                                              @RequestBody @Valid AssignDto dto) {
+        techConditionExecutionAbdAddressDecisionService.approveAndSendForSign(decisionId, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/decisions/{decisionId}/sign")
+    @Operation(tags = "TECH-CONDITION DECISION EVENTS", summary = "Подписание решения")
+    public ResponseEntity<Void> signDecision(@PathVariable UUID decisionId,
                                              @RequestBody SignCreateDto sign) {
-        techConditionExecutionAbdAddressDecisionService.signDecision(id, sign);
+        techConditionExecutionAbdAddressDecisionService.sign(decisionId, sign);
         return ResponseEntity.noContent().build();
     }
 }

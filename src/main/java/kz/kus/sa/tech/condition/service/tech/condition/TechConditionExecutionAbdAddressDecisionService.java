@@ -1,5 +1,6 @@
 package kz.kus.sa.tech.condition.service.tech.condition;
 
+import kz.kus.sa.registry.dto.common.AssignDto;
 import kz.kus.sa.registry.dto.common.SignCreateDto;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dto.TechConditionExecuteDto;
@@ -12,6 +13,8 @@ import java.util.UUID;
 
 public interface TechConditionExecutionAbdAddressDecisionService {
 
+    void assign(UUID executionId, AssignDto dto);
+
     void saveAll(UUID executionId, List<TechConditionExecutionAbdAddressDecisionDto> dtos);
 
     void replaceAll(UUID executionId, List<TechConditionExecutionAbdAddressDecisionDto> dtos);
@@ -22,11 +25,25 @@ public interface TechConditionExecutionAbdAddressDecisionService {
 
     void deleteAllByExecutionId(UUID executionId);
 
-    void executeApplication(UUID id, TechConditionExecuteDto dto);
+    // методы переехавшие из TechConditionExecutionService
+    void takeToExecution(UUID decisionId);
 
-    void signDecision(UUID id, SignCreateDto sign);
+    void sendForRevision(UUID decisionId, String reason);
 
-    TechConditionProjectDto createProject(UUID id, TechConditionProjectCreateDto dto);
+    void sendForApproval(UUID decisionId, AssignDto dto);
 
-    void formationReasonedRefusal(UUID id, TechConditionExecuteDto dto);
+    void approve(UUID decisionId);
+
+    void sendForSign(UUID decisionId, AssignDto dto);
+
+    void approveAndSendForSign(UUID decisionId, AssignDto dto);
+
+    void sign(UUID decisionId, SignCreateDto sign);
+
+    // методы которые были в AbdAddressDecisionService
+    void executeApplication(UUID executionId, TechConditionExecuteDto dto);
+
+    TechConditionProjectDto createProject(UUID executionId, TechConditionProjectCreateDto dto);
+
+    void formationReasonedRefusal(UUID executionId, TechConditionExecuteDto dto);
 }

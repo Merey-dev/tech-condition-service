@@ -22,6 +22,7 @@ import kz.kus.sa.registry.enums.Status;
 import kz.kus.sa.report.api.ReportTechConditionApiService;
 import kz.kus.sa.tech.condition.dao.entity.HistoryEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionEntity;
+import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionEntity;
 import kz.kus.sa.tech.condition.dao.mapper.*;
 import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionRepository;
@@ -497,53 +498,18 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
                 entity.setOwner(externalUserMapper.toEntity(userDto));
             }
         }
-        if (Event.ASSIGN_TO_DIVISION_WITH_ADDRESS == dto.getEvent()) {
-            if (isEmpty(dto.getAddressDivisions())) {
-                throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
-            } else {
-                List<SubdivisionDto> subdivisionList = new ArrayList<>();
-                List<UserDto> userList = new ArrayList<>();
-
-                dto.getAddressDivisions().forEach(d -> {
-                    subdivisionList.add(providerApiService.getSubdivision(d.getDivision()));
-
-                    List<UserDto> users = userApiService.searchAsList(UserFilterDto.builder()
-                            .subDivisionIds(List.of(d.getDivision()))
-                            .permissions(List.of(Event.TCE_TAKE_TO_EXECUTION.name())) //todo TAKE_TO_EXECUTION
-                            .build());
-                    userList.addAll(users);
-                    assignees.addAll(
-                            users.stream()
-                                    .map(UserDto::getId)
-                                    .collect(Collectors.toList())
-                    );
-                    notificationRecipients.addAll(
-                            users.stream()
-                                    .map(UserDto::getEmail)
-                                    .collect(Collectors.toSet())
-                    );
-                });
-                entity.setAssignedSubdivision(externalSubdivisionMapper.toEntity(subdivisionList.get(0)));//todo refactor List<>
-                entity.setOwner(externalUserMapper.toEntity(userList.get(0)));//todo refactor List<>
-            }
-        }
-        if (Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS == dto.getEvent()) {
-            if (isEmpty(dto.getAddressExecutors())) {
-                throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
-            } else {
-                List<UserDto> userList = new ArrayList<>();
-
-                dto.getAddressExecutors().forEach(e -> {
-                    userList.add(userApiService.getUserById(e.getExecutor()));
-                    assignees.add(e.getExecutor());
-                });
-                notificationRecipients.add(userList.get(0).getEmail());
-
-                SubdivisionDto subdivisionDto = providerApiService.getSubdivision(userList.get(0).getSubdivisionId());//todo refactor List<>
-                entity.setAssignedExecutor(externalUserMapper.toEntity(userList.get(0)));//todo refactor List<>
-                entity.setAssignedSubdivision(externalSubdivisionMapper.toEntity(subdivisionDto));
-                entity.setOwner(externalUserMapper.toEntity(userList.get(0)));//todo refactor List<>
-            }
+        if (Event.ASSIGN_TO_DIVISION_WITH_ADDRESS == dto.getEvent()
+                || Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS == dto.getEvent()) {
+            abdAddressDecisionService.assign(id, dto);
+            // assignees для execution собираем из decisions
+            List<TechConditionExecutionAbdAddressDecisionEntity> decisions =
+                    abdAddressDecisionService.findAllByExecutionId(id);
+            assignees.addAll(
+                    decisions.stream()
+                            .flatMap(d -> d.getAssignees().stream())
+                            .distinct()
+                            .collect(Collectors.toList())
+            );
         }
 
         if (assignees.isEmpty()) {
@@ -578,7 +544,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
                 formattedDate(techConditionEntity.getApplicationDatetime())));
     }
 
-    @Deprecated
+    /*@Deprecated
     @Override
     public void reAssign(UUID id, AssignDto dto) {
         TechConditionExecutionEntity entity = findById(id);
@@ -843,7 +809,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
 
         log.info("TECH CONDITION [EXECUTION APPROVED]: id = [{}], execution id = [{}]", techConditionEntity.getId(), entity.getId());
 
-        isAllExecutionsApproved(techConditionEntity);
+        isAllExecutionsApproved(techConditionEntity);//todo ПТС
     }
 
     private void isAllExecutionsApproved(TechConditionEntity techConditionEntity) {
@@ -965,7 +931,9 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
 
+    */
     /** DECISIONS */
+    /*
     @Override
     public void assignParallel(UUID id, AssignDto dto) {
         TechConditionExecutionEntity entity = findById(id);
@@ -1122,7 +1090,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     @Override
-    public void assignDecisionForSign(UUID id, AssignDto dto) {
+    public void assignDecisionForSign(UUID id, AssignDto dto) {//todo заяв надо остаться в ON_EXECUTION
         TechConditionExecutionEntity entity = findById(id);
         TechConditionEntity techConditionEntity = entity.getTechCondition();
 
@@ -1181,7 +1149,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     @Override
-    public TechConditionEntity approveDecision(UUID id) {
+    public TechConditionEntity approveDecision(UUID id) {//todo если 1 проект ТУ и статус поменялся
         TechConditionExecutionEntity entity = findById(id);
         TechConditionEntity techConditionEntity = entity.getTechCondition();
 
@@ -1208,7 +1176,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     public void approveDecisionAndSendForSign(UUID id, AssignDto dto) {
         this.approveDecision(id);
         this.assignDecisionForSign(id, dto);
-    }
+    }*/
 
 
     private void updateData(TechConditionEntity entity, Event event) {

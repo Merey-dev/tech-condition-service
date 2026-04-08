@@ -89,25 +89,25 @@ public class TechConditionStatemachine extends StateConfig<String, Event, TechCo
                 // Переназначение
                 .event(Event.ASSIGN_TO_DIVISION)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isInitiator(entity))
+//                .guard((entity, execution) -> isInitiator(entity))
 
                 // Переназначение
                 .and()
                 .event(Event.ASSIGN_TO_EXECUTOR)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isInitiator(entity))
+//                .guard((entity, execution) -> isInitiator(entity))
 
                 // Переназначение
                 .and()
                 .event(Event.ASSIGN_TO_DIVISION_WITH_ADDRESS)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isInitiator(entity))
+//                .guard((entity, execution) -> isInitiator(entity))
 
                 // Переназначение
                 .and()
                 .event(Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isInitiator(entity))
+//                .guard((entity, execution) -> isInitiator(entity))
 
                 .and()
                 .event(Event.TAKE_TO_EXECUTION).targetState(Status.ON_EXECUTION.getCode())
