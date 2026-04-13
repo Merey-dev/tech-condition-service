@@ -54,6 +54,26 @@ public class TechConditionExecutionStatemachine extends StateConfig<String, Even
 
         // Статус "На исполнении"
         stateBuilder.state(ExecutionStatus.ON_EXECUTION.getCode())
+                .event(Event.ASSIGN_TO_DIVISION).targetState(ExecutionStatus.ASSIGNED.getCode())
+                .action(this::setState)
+                .guard((entity, execution) -> isExecutor(execution))
+
+                .and()
+                .event(Event.ASSIGN_TO_EXECUTOR).targetState(ExecutionStatus.ASSIGNED.getCode())
+                .action(this::setState)
+                .guard((entity, execution) -> isExecutor(execution))
+
+                .and()
+                .event(Event.ASSIGN_TO_DIVISION_WITH_ADDRESS).targetState(ExecutionStatus.ASSIGNED.getCode())
+                .action(this::setState)
+                .guard((entity, execution) -> isExecutor(execution))
+
+                .and()
+                .event(Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS).targetState(ExecutionStatus.ASSIGNED.getCode())
+                .action(this::setState)
+                .guard((entity, execution) -> isExecutor(execution))
+
+                .and()
                 .event(Event.TC_SIGN).targetState(ExecutionStatus.SIGNED.getCode())
                 .action(this::setState)
 

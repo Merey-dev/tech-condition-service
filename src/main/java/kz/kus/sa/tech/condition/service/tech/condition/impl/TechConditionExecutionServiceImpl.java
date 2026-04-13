@@ -521,9 +521,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
         if (Event.ASSIGN_TO_DIVISION_WITH_ADDRESS == dto.getEvent()
                 || Event.ASSIGN_TO_EXECUTOR_WITH_ADDRESS == dto.getEvent()) {
             abdAddressDecisionService.assign(id, dto);
-            // assignees для execution собираем из decisions
-            List<TechConditionExecutionAbdAddressDecisionEntity> decisions =
-                    abdAddressDecisionService.findAllByExecutionId(id);
+            List<TechConditionExecutionAbdAddressDecisionEntity> decisions = abdAddressDecisionService.findAllByExecutionId(id);
             assignees.addAll(
                     decisions.stream()
                             .flatMap(d -> d.getAssignees().stream())

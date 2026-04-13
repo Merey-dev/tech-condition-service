@@ -68,10 +68,10 @@ public class TechConditionExecutionEntity extends AbstractAuditingEntity {
     private TechConditionEntity techCondition;
 
 
-    /** ДАННЫЕ ФОРМИРОВАНИЯ ТУ */
-    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinColumn(name = "project_id")
-    private TechConditionProjectEntity project;
+//    /** ДАННЫЕ ФОРМИРОВАНИЯ ТУ */
+//    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+//    @JoinColumn(name = "project_id")
+//    private TechConditionProjectEntity project;
 
 
     /** СИСТЕМНЫЕ ПОЛЯ

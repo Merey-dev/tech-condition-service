@@ -105,7 +105,7 @@ public class TechConditionProjectServiceImpl implements TechConditionProjectServ
         abdAddressService.saveList(null, entity.getObjectAbdAddresses(), entity);
 
         if (nonNull(execution)) {
-            execution.setProject(entity);
+//            execution.setProject(entity);
             techConditionExecutionRepository.save(execution);
         }
 

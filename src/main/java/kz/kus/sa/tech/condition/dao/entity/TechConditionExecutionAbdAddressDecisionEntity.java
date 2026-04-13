@@ -55,7 +55,7 @@ public class TechConditionExecutionAbdAddressDecisionEntity extends AbstractAudi
      * <p>
      * Тип решения */
     @Enumerated(EnumType.STRING)
-    @Column(name = "decision_type", nullable = false)
+    @Column(name = "decision_type")
     private TechConditionExecutionDecisionType decisionType;
 
 
@@ -162,7 +162,7 @@ public class TechConditionExecutionAbdAddressDecisionEntity extends AbstractAudi
 
     /** Связанные пользователи */
     @Type(type = "list-array")
-    @Column(name = "related_users", columnDefinition = "uuid[]",  nullable = false)
+    @Column(name = "related_users", columnDefinition = "uuid[]")
     private List<UUID> relatedUsers;
 
     /** Статус */

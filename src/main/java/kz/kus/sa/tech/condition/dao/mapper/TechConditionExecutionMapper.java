@@ -15,6 +15,7 @@ import java.util.List;
         ExternalUserMapper.class,
         ExternalSubdivisionMapper.class,
         TechConditionProjectMapper.class,
+        TechConditionExecutionAbdAddressDecisionMapper.class,
 })
 public interface TechConditionExecutionMapper {
 
@@ -22,6 +23,7 @@ public interface TechConditionExecutionMapper {
 
     @Mapping(target = "statement", source = "entity", qualifiedByName = "statement")
     @Mapping(target = "techConditionId", source = "entity.techCondition.id")
+    @Mapping(target = "abdAddressDecisions", source = "entity.abdAddressDecisions")
     TechConditionExecutionDto toDto(TechConditionExecutionEntity entity);
 
     List<TechConditionExecutionDto> toDtoList(List<TechConditionExecutionEntity> entityList);

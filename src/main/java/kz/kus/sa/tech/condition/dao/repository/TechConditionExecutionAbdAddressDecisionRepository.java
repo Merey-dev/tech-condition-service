@@ -16,8 +16,6 @@ public interface TechConditionExecutionAbdAddressDecisionRepository extends JpaR
 
     Optional<TechConditionExecutionAbdAddressDecisionEntity> findByTechConditionExecutionIdAndObjectAbdAddressId(UUID executionId, UUID abdAddressId);
 
-    boolean existsByTechConditionExecutionIdAndStatusCodeIsNot(UUID executionId, String statusCode);
-
     boolean existsByTechConditionExecutionIdAndStatusCodeNot(UUID executionId, String statusCode);
 
     @Query(value = "SELECT coalesce(max(e.reasonForRefusalInternalRegistrationNumber), 0) FROM TechConditionExecutionAbdAddressDecisionEntity e " +
