@@ -138,10 +138,6 @@ public class AbdAddressEntity extends AbstractAuditingEntity {
     private ActOfDelineationRenewalEntity actOfDelineationRenewal;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "act_of_delineation_renewal_executions_id", referencedColumnName = "id", table = "abd_address", foreignKey = @ForeignKey(name = "fk_abd_address_act_of_delineation_renewal_executions"))
-    private ActOfDelineationRenewalExecutionEntity actOfDelineationRenewalExecution;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "act_of_delineations_id", referencedColumnName = "id", table = "abd_address", foreignKey = @ForeignKey(name = "fk_abd_address_act_of_delineations"))
     private ActOfDelineationEntity actOfDelineation;
 }

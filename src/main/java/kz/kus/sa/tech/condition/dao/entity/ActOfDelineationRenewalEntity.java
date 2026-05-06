@@ -19,6 +19,7 @@ import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 
 import javax.persistence.*;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -118,6 +119,19 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
             @AttributeOverride(name = "uploadedDatetime", column = @Column(name = "consumer_sign_file_datetime", columnDefinition = "TIMESTAMP WITH TIME ZONE"))
     })
     private ExternalFileEmbedded consumerSignFile;
+
+
+    /** АКТ */
+    @Column(name = "act_id")
+    private UUID actId;
+
+    /** Номер акта */
+    @Column(name = "act_registration_number")
+    private String actRegistrationNumber;
+
+    /** Дата акта */
+    @Column(name = "act_date")
+    private LocalDate actDate;
 
 
     /** СИСТЕМНЫЕ ПОЛЯ

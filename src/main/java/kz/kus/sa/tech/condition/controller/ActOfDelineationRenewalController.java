@@ -2,6 +2,7 @@ package kz.kus.sa.tech.condition.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import kz.kus.sa.registry.dto.common.AssignDto;
+import kz.kus.sa.registry.dto.common.SignCreateDto;
 import kz.kus.sa.tech.condition.service.act.ActOfDelineationRenewalService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -62,7 +63,7 @@ public class ActOfDelineationRenewalController {
         return ResponseEntity.noContent().build();
     }
 
-    /*@PatchMapping("/{statementId}/provider-sign")
+    @PatchMapping("/{statementId}/provider-sign")
     @Operation(tags = "ACT OF DELINATION RENEWAL EVENT", summary = "Подписание поставщиком акта разграничения")
     public ResponseEntity<Void> providerSign(@PathVariable UUID statementId,
                                              @RequestBody @Valid SignCreateDto dto) {
@@ -76,5 +77,5 @@ public class ActOfDelineationRenewalController {
                                              @RequestBody @Valid SignCreateDto dto) {
         actOfDelineationRenewalService.consumerSign(statementId, dto);
         return ResponseEntity.noContent().build();
-    }*/
+    }
 }

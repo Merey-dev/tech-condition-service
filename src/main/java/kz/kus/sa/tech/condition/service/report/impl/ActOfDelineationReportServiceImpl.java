@@ -72,7 +72,7 @@ public class ActOfDelineationReportServiceImpl implements ActOfDelineationReport
     @Override
     public ActOfDelineationRenewalReportDto actReportData(UUID id) {
         var renewal = findById(id);
-        var act = actOfDelineationService.findByRenewalExecutionId(id);
+        var act = actOfDelineationService.findByRenewalId(id);
 
         var dto = actOfDelineationReportMapper.toActOfDelineationRenewalReportDto(act);
 

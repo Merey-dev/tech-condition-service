@@ -131,9 +131,4 @@ public class HistoryEntity extends AbstractAuditingEntity {
     @JoinColumn(name = "act_of_delineation_renewals_id")
     @ToString.Exclude
     private ActOfDelineationRenewalEntity actOfDelineationRenewal;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "act_of_delineation_renewal_executions_id")
-    @ToString.Exclude
-    private ActOfDelineationRenewalExecutionEntity actOfDelineationRenewalExecution;
 }

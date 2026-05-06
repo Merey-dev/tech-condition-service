@@ -35,13 +35,13 @@ public abstract class ActOfDelineationReportMapper {
     public abstract ActOfDelineationRenewalApplicationReportDto toActOfDelineationRenewalApplicationReportDto(ActOfDelineationRenewalEntity entity);
 
     @Mapping(target = "preparationDatetime", expression = "java(kz.kus.sa.tech.condition.util.CommonUtils.formattedDate(entity.getPreparationDatetime()))")
-    @Mapping(target = "consumerIinBin", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.consumerIinBin")
-    @Mapping(target = "consumerType", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.consumerType", qualifiedByName = "consumerType")
-    @Mapping(target = "consumerFullNameRu", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.consumerFullNameRu")
-    @Mapping(target = "consumerFullNameKk", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.consumerFullNameKk")
-    @Mapping(target = "responsibleForElectricalEquipment", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.responsibleForElectricalEquipment")
-    @Mapping(target = "subdivisionNameRu", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.subdivision.ru")
-    @Mapping(target = "subdivisionNameKk", source = "actOfDelineationRenewalExecution.actOfDelineationRenewal.subdivision.kk")
+    @Mapping(target = "consumerIinBin", source = "actOfDelineationRenewal.consumerIinBin")
+    @Mapping(target = "consumerType", source = "actOfDelineationRenewal.consumerType", qualifiedByName = "consumerType")
+    @Mapping(target = "consumerFullNameRu", source = "actOfDelineationRenewal.consumerFullNameRu")
+    @Mapping(target = "consumerFullNameKk", source = "actOfDelineationRenewal.consumerFullNameKk")
+    @Mapping(target = "responsibleForElectricalEquipment", source = "actOfDelineationRenewal.responsibleForElectricalEquipment")
+    @Mapping(target = "subdivisionNameRu", source = "actOfDelineationRenewal.subdivision.ru")
+    @Mapping(target = "subdivisionNameKk", source = "actOfDelineationRenewal.subdivision.kk")
     public abstract ActOfDelineationRenewalReportDto toActOfDelineationRenewalReportDto(ActOfDelineationEntity entity);
 
     public abstract AbdAddressReportDto toAbdAddressReport(AbdAddressEntity entity);

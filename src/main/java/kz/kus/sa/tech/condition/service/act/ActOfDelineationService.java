@@ -20,5 +20,5 @@ public interface ActOfDelineationService {
 
     ActOfDelineationDto getById(UUID id);
 
-    ActOfDelineationEntity findByRenewalExecutionId(UUID renewalExecutionId);
+    ActOfDelineationEntity findByRenewalId(UUID renewalId);
 }

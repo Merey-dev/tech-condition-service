@@ -21,6 +21,7 @@ import java.util.UUID;
 /**
  * Лист исполнения Заявления переоформление акта разграничения балансовой принадлежности
  */
+@Deprecated
 @Data
 @Entity
 @EqualsAndHashCode(callSuper = true)

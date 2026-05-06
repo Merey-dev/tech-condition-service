@@ -19,15 +19,10 @@ import java.util.UUID;
 @Table(name = "act_of_delineations", schema = Constants.SCHEMA_NAME)
 public class ActOfDelineationEntity extends AbstractAuditingEntity {
 
-//    /** ЗАЯВЛЕНИЕ */
-//    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-//    @JoinColumn(name = "act_of_delineation_renewals_id", nullable = false)
-//    private ActOfDelineationRenewalEntity actOfDelineationRenewal;
-
-    /** Лист исполнения ЗАЯВЛЕНИЯ */
+    /** ЗАЯВЛЕНИЕ */
     @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinColumn(name = "act_of_delineation_renewal_executions_id", nullable = false)
-    private ActOfDelineationRenewalExecutionEntity actOfDelineationRenewalExecution;
+    @JoinColumn(name = "act_of_delineation_renewals_id", nullable = false)
+    private ActOfDelineationRenewalEntity actOfDelineationRenewal;
 
 
     /** Рег.номер Акта */

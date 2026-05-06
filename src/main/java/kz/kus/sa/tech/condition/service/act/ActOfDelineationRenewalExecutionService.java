@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 import static java.util.Objects.isNull;
 import static org.hibernate.internal.util.collections.CollectionHelper.isEmpty;
 
+@Deprecated
 @Slf4j
 @Service
 @Transactional

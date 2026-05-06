@@ -120,11 +120,6 @@ public class AbdAddressServiceImpl implements AbdAddressService {
     }
 
     @Override
-    public List<AbdAddressEntity> getByActOfDelineationRenewalExecutionId(UUID actOfDelineationRenewalExecutionId) {
-        return abdAddressRepository.findAllByActOfDelineationRenewalExecutionId(actOfDelineationRenewalExecutionId);
-    }
-
-    @Override
     public List<AbdAddressEntity> getByActOfDelineationId(UUID actOfDelineationId) {
         return abdAddressRepository.findAllByActOfDelineationId(actOfDelineationId);
     }
@@ -151,7 +146,6 @@ public class AbdAddressServiceImpl implements AbdAddressService {
         entity.setTechConditionExecution(null);
         entity.setTechConditionProject(null);
         entity.setActOfDelineationRenewal(null);
-        entity.setActOfDelineationRenewalExecution(null);
         entity.setActOfDelineation(null);
 
         if (object instanceof TechConditionEntity) {
@@ -162,8 +156,6 @@ public class AbdAddressServiceImpl implements AbdAddressService {
             entity.setTechConditionProject((TechConditionProjectEntity) object);
         } else if (object instanceof ActOfDelineationRenewalEntity) {
             entity.setActOfDelineationRenewal((ActOfDelineationRenewalEntity) object);
-        } else if (object instanceof ActOfDelineationRenewalExecutionEntity) {
-            entity.setActOfDelineationRenewalExecution((ActOfDelineationRenewalExecutionEntity) object);
         } else if (object instanceof ActOfDelineationEntity) {
             entity.setActOfDelineation((ActOfDelineationEntity) object);
         } else {

@@ -77,7 +77,6 @@ public class HistoryServiceImpl implements HistoryService {
         history.setAssignees(actOfDelineationRenewal.getAssignees());
 
         setCurrentUser(history, actOfDelineationRenewal.getCurrentUserId());
-        setExecution(history, execution, event);
 
         repository.save(history);
     }
@@ -92,22 +91,6 @@ public class HistoryServiceImpl implements HistoryService {
     private void setExecution(HistoryEntity history, TechConditionExecutionEntity execution, Event event) {
         if (nonNull(execution)) {
             history.setTechConditionExecution(execution);
-            history.setExecutionStatus(execution.getStatusCode());
-            history.setAssignees(execution.getAssignees());
-
-            setAssignedByUser(history, execution.getAssignedBy());
-            setAssigned(history, execution.getAssignees(), event);
-
-            if (Event.CHANGE_ASSIGNEE == event) {
-                UserDto userDto = userApiService.getUserById(execution.getAssignees().get(0));
-                history.setAssignedExecutor(externalUserMapper.toEntity(userDto));
-            }
-        }
-    }
-
-    private void setExecution(HistoryEntity history, ActOfDelineationRenewalExecutionEntity execution, Event event) {
-        if (nonNull(execution)) {
-            history.setActOfDelineationRenewalExecution(execution);
             history.setExecutionStatus(execution.getStatusCode());
             history.setAssignees(execution.getAssignees());
 

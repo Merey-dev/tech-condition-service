@@ -21,8 +21,7 @@ public interface ActOfDelineationMapper {
     @Mapping(target = "lastModifiedDatetime", expression = "java(java.time.OffsetDateTime.now())")
     ActOfDelineationEntity toEntity(@MappingTarget ActOfDelineationEntity entity, ActOfDelineationUpdateDto dto);
 
-    @Mapping(target = "statementId", source = "entity.actOfDelineationRenewalExecution.actOfDelineationRenewal.statementId")
-    @Mapping(target = "actOfDelineationRenewalId", source = "entity.actOfDelineationRenewalExecution.actOfDelineationRenewal.id")
-    @Mapping(target = "actOfDelineationRenewalExecutionId", source = "entity.actOfDelineationRenewalExecution.id")
+    @Mapping(target = "statementId", source = "entity.actOfDelineationRenewal.statementId")
+    @Mapping(target = "actOfDelineationRenewalId", source = "entity.actOfDelineationRenewal.id")
     ActOfDelineationDto toDto(ActOfDelineationEntity entity);
 }

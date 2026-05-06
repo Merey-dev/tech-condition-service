@@ -13,6 +13,7 @@ import java.util.UUID;
 /**
  * Исполнения по заявлению акта разграничения балансовой принадлежности
  */
+@Deprecated
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/act-of-delineation-renewals-executions")

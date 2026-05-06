@@ -10,11 +10,11 @@ import kz.kus.sa.auth.api.user.dto.UserFilterDto;
 import kz.kus.sa.registry.api.RegistryApiService;
 import kz.kus.sa.registry.api.RegistrySignApiService;
 import kz.kus.sa.registry.dto.common.AssignDto;
+import kz.kus.sa.registry.dto.common.SignCreateDto;
 import kz.kus.sa.registry.dto.renewal.ActOfDelineationRenewalDto;
 import kz.kus.sa.registry.enums.Event;
 import kz.kus.sa.report.api.ReportActOfDelineationRenewalApiService;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalEntity;
-import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalExecutionEntity;
 import kz.kus.sa.tech.condition.dao.mapper.ActOfDelineationRenewalMapper;
 import kz.kus.sa.tech.condition.dao.mapper.ExternalSubdivisionMapper;
 import kz.kus.sa.tech.condition.dao.mapper.ExternalUserMapper;
@@ -22,7 +22,6 @@ import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalRepository
 import kz.kus.sa.tech.condition.exception.BadRequestException;
 import kz.kus.sa.tech.condition.exception.ErrorCode;
 import kz.kus.sa.tech.condition.exception.NotFoundException;
-import kz.kus.sa.tech.condition.service.act.ActOfDelineationRenewalExecutionService;
 import kz.kus.sa.tech.condition.service.act.ActOfDelineationRenewalService;
 import kz.kus.sa.tech.condition.service.report.ActOfDelineationReportService;
 import kz.kus.sa.tech.condition.statemachine.ActOfDelineationRenewalStatemachine;
@@ -60,7 +59,6 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
     private final ActOfDelineationReportService actOfDelineationReportService;
     private final ActOfDelineationRenewalRepository actOfDelineationRenewalRepository;
     private final ActOfDelineationRenewalStatemachine actOfDelineationRenewalStatemachine;
-    private final ActOfDelineationRenewalExecutionService actOfDelineationRenewalExecutionService;
     private final ReportActOfDelineationRenewalApiService reportActOfDelineationRenewalApiService;
 
     @Override
@@ -264,8 +262,8 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
 //                    );
 
 //                    d.getObjectAbdAddresses().forEach(a -> {
-                    ActOfDelineationRenewalExecutionEntity execution = actOfDelineationRenewalExecutionService.create(finalEntity.getId(), dto);
-                    execution.setAssignedBy(currentUser.getId());
+//                    ActOfDelineationRenewalExecutionEntity execution = actOfDelineationRenewalExecutionService.create(finalEntity.getId(), dto);
+//                    execution.setAssignedBy(currentUser.getId());
 //                    });
                 });
             }
@@ -284,8 +282,8 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
 //                    );
 
 //                    e.getObjectAbdAddresses().forEach(a -> {
-                    ActOfDelineationRenewalExecutionEntity execution = actOfDelineationRenewalExecutionService.create(finalEntity.getId(), dto);
-                    execution.setAssignedBy(currentUser.getId());
+//                    ActOfDelineationRenewalExecutionEntity execution = actOfDelineationRenewalExecutionService.create(finalEntity.getId(), dto);
+//                    execution.setAssignedBy(currentUser.getId());
 //                    });
                 });
             }
@@ -296,13 +294,13 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
             throw new BadRequestException(ErrorCode.NO_USERS_TO_ASSIGN.name());
         }
 
-        ActOfDelineationRenewalExecutionEntity execution = null;
+//        ActOfDelineationRenewalExecutionEntity execution = null;
 //        if (List.of(Event.ASSIGN_TO_DIVISION, Event.ASSIGN_TO_EXECUTOR).contains(dto.getEvent())) {
 //            execution = techConditionExecutionService.create(entity.getId(), dto, TechConditionExecutionType.APPLICATION, false);
 //            execution.setAssignedBy(currentUser.getId());
 //        }
 
-        changeState(entity, execution, dto.getEvent());
+        changeState(entity, null, dto.getEvent());
 
         setUsersOnEntity(entity, Collections.singletonList(currentUser.getId()), false);
 
@@ -362,7 +360,8 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
         updateData(entity, Event.SEND_FOR_REVISION);
     }
 
-    /*public void providerSign(UUID statementId, SignCreateDto sign) {
+    @Override
+    public void providerSign(UUID statementId, SignCreateDto sign) {
         var entity = findByStatementId(statementId);
 
         checkState(entity, null, Event.PROVIDER_SIGN);
@@ -383,6 +382,7 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
         updateData(entity, Event.PROVIDER_SIGN);
     }
 
+    @Override
     public void consumerSign(UUID statementId, SignCreateDto sign) {
         var entity = findByStatementId(statementId);
 
@@ -396,7 +396,7 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
         baseSave(entity);
 
         updateData(entity, Event.CONSUMER_SIGN);
-    }*/
+    }
 
     private ActOfDelineationRenewalEntity baseSave(ActOfDelineationRenewalEntity entity) {
         OffsetDateTime now = OffsetDateTime.now();
@@ -447,20 +447,20 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
         registryApiService.updateData(dto.getId(), dto);
     }
 
-    private void checkState(ActOfDelineationRenewalEntity entity, ActOfDelineationRenewalExecutionEntity execution, Event event) {
+    private void checkState(ActOfDelineationRenewalEntity entity, Object execution, Event event) {
         log.info("ACT OF DELINEATION RENEWAL [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            actOfDelineationRenewalStatemachine.checkState(entity, execution, entity.getStatusCode(), event);
+            actOfDelineationRenewalStatemachine.checkState(entity, null, entity.getStatusCode(), event);
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("ACT OF DELINEATION RENEWAL [CHECK-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
         }
     }
 
-    private void changeState(ActOfDelineationRenewalEntity entity, ActOfDelineationRenewalExecutionEntity execution, Event event) {
+    private void changeState(ActOfDelineationRenewalEntity entity, Object execution, Event event) {
         log.info("ACT OF DELINEATION RENEWAL [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            actOfDelineationRenewalStatemachine.changeState(entity, execution, entity.getStatusCode(), event);
+            actOfDelineationRenewalStatemachine.changeState(entity, null, entity.getStatusCode(), event);
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("ACT OF DELINEATION RENEWAL [CHANGE-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());

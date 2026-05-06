@@ -17,8 +17,6 @@ public interface AbdAddressService {
 
     List<AbdAddressEntity> getByActOfDelineationRenewalId(UUID actOfDelineationRenewalId);
 
-    List<AbdAddressEntity> getByActOfDelineationRenewalExecutionId(UUID actOfDelineationRenewalExecutionId);
-
     List<AbdAddressEntity> getByActOfDelineationId(UUID actOfDelineationId);
 
     void deleteDatetime(List<AbdAddressEntity> list);

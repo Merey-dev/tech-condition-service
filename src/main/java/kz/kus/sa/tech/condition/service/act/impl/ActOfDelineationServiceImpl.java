@@ -6,9 +6,9 @@ import kz.kus.sa.auth.api.provider.enums.ActivityType;
 import kz.kus.sa.registry.api.RegistryGenerateNumberApiService;
 import kz.kus.sa.registry.enums.RegistrationNumberActType;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationEntity;
-import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalExecutionEntity;
+import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalEntity;
 import kz.kus.sa.tech.condition.dao.mapper.ActOfDelineationMapper;
-import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalExecutionRepository;
+import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalRepository;
 import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRepository;
 import kz.kus.sa.tech.condition.dto.act.ActOfDelineationCreateDto;
 import kz.kus.sa.tech.condition.dto.act.ActOfDelineationDto;
@@ -45,7 +45,7 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
     private final ActOfDelineationMapper actOfDelineationMapper;
     private final ActOfDelineationRepository actOfDelineationRepository;
     private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
-    private final ActOfDelineationRenewalExecutionRepository actOfDelineationRenewalExecutionRepository;
+    private final ActOfDelineationRenewalRepository actOfDelineationRenewalRepository;
 
     @Override
     public Page<ActOfDelineationDto> getAll(ActOfDelineationSearchDto search, Pageable pageable) {
@@ -62,13 +62,13 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
 
         this.setRegistrationNumber(entity, dto.getProviderId());
 
-        var execution = this.findExecutionById(dto.getActOfDelineationRenewalExecutionId());
-        execution.setActId(entity.getId());
-        execution.setActRegistrationNumber(entity.getRegistrationNumber());
-        execution.setActDate(entity.getPreparationDatetime().toLocalDate());
-        this.baseSave(execution);
+        var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
+        renewal.setActId(entity.getId());
+        renewal.setActRegistrationNumber(entity.getRegistrationNumber());
+        renewal.setActDate(entity.getPreparationDatetime().toLocalDate());
+        this.baseSave(renewal);
 
-        entity.setActOfDelineationRenewalExecution(execution);
+        entity.setActOfDelineationRenewal(renewal);
 
         entity = baseSave(entity);
         log.info("ACT OF DELINEATION [CREATED]: id = [{}]", entity.getId());
@@ -80,8 +80,8 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         var entity = this.findById(id);
         entity = actOfDelineationMapper.toEntity(entity, dto);
 
-        var execution = this.findExecutionById(dto.getActOfDelineationRenewalExecutionId());
-        entity.setActOfDelineationRenewalExecution(execution);
+        var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
+        entity.setActOfDelineationRenewal(renewal);
 
         entity = baseSave(entity);
         log.info("ACT OF DELINEATION [UPDATED]: id = [{}]", entity.getId());
@@ -91,6 +91,12 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
     @Override
     public ActOfDelineationDto getById(UUID id) {
         return actOfDelineationMapper.toDto(this.findById(id));
+    }
+
+    @Override
+    public ActOfDelineationEntity findByRenewalId(UUID renewalId) {
+        return actOfDelineationRepository.findByActOfDelineationRenewalId(renewalId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 
     private void setRegistrationNumber(ActOfDelineationEntity entity, UUID providerId) {
@@ -121,19 +127,13 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         );
     }
 
-    @Override
-    public ActOfDelineationEntity findByRenewalExecutionId(UUID renewalExecutionId) {
-        return actOfDelineationRepository.findByActOfDelineationRenewalExecutionId(renewalExecutionId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
-    }
-
     private ActOfDelineationEntity findById(UUID id) {
         return actOfDelineationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 
-    private ActOfDelineationRenewalExecutionEntity findExecutionById(UUID id) {
-        return actOfDelineationRenewalExecutionRepository.findByIdAndDeletedDatetimeIsNull(id)
+    private ActOfDelineationRenewalEntity findRenewalById(UUID renewalId) {
+        return actOfDelineationRenewalRepository.findByIdAndDeletedDatetimeIsNull(renewalId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 
@@ -146,12 +146,12 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         return actOfDelineationRepository.save(entity);
     }
 
-    private void baseSave(ActOfDelineationRenewalExecutionEntity entity) {
+    private ActOfDelineationRenewalEntity baseSave(ActOfDelineationRenewalEntity entity) {
         OffsetDateTime now = OffsetDateTime.now();
         if (isNull(entity.getCreatedDatetime())) {
             entity.setCreatedDatetime(now);
         }
         entity.setLastModifiedDatetime(now);
-        actOfDelineationRenewalExecutionRepository.save(entity);
+        return actOfDelineationRenewalRepository.save(entity);
     }
 }
