@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import kz.kus.sa.tech.condition.dto.report.TechConditionApplicationReportDto;
 import kz.kus.sa.tech.condition.dto.report.TechConditionDecisionReportDto;
 import kz.kus.sa.tech.condition.dto.report.epo.TechConditionEpoApplicationReportDto;
+import kz.kus.sa.tech.condition.dto.report.epo.TechConditionEpoDecisionReportDto;
 import kz.kus.sa.tech.condition.service.report.TechConditionEpoReportService;
 import kz.kus.sa.tech.condition.service.report.TechConditionReportService;
 import lombok.AllArgsConstructor;
@@ -51,5 +52,20 @@ public class ReportInternalController {
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<TechConditionEpoApplicationReportDto> applicationEpoReportData(@PathVariable UUID id) {
         return ResponseEntity.ok(techConditionEpoReportService.applicationReportData(id));
+    }
+
+    @GetMapping("/epo/{id}/decision-report")
+    @Operation(tags = "TECH CONDITION EPO BLANK", summary = "Данные для решения Согласование ТУ по сетям ЭПО")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<TechConditionEpoDecisionReportDto> getDecisionEpoReportData(@PathVariable UUID id) {
+        return ResponseEntity.ok(techConditionEpoReportService.getDecisionReportData(id));
+    }
+
+    @GetMapping("/epo/{id}/decision-report/address/{abdAddressId}")
+    @Operation(tags = "TECH CONDITION EPO BLANK", summary = "Данные для решения Согласование ТУ по сетям ЭПО по конкретному адресу")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<TechConditionEpoDecisionReportDto> getDecisionEpoReportDataByAddress(@PathVariable UUID id,
+                                                                                               @PathVariable UUID abdAddressId) {
+        return ResponseEntity.ok(techConditionEpoReportService.getDecisionReportDataByAddress(id, abdAddressId));
     }
 }

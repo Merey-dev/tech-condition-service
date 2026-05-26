@@ -28,7 +28,7 @@ spring:
   application:
     name: ${APPLICATION_NAME:tech-condition-service}
   datasource:
-    url: ${TECH_CONDITION_DATABASE_URL:jdbc:postgresql://localhost:5432/tech-condition-service}
+    url: ${TECH_CONDITION_DATABASE_URL:jdbc:postgresql://postgresql.postgresql.svc.cluster.local:5432/tech-condition-service}
     driver-class-name: org.postgresql.Driver
     username: ${TECH_CONDITION_DATABASE_USERNAME:techconditionserviceuser}
     password: ${TECH_CONDITION_DATABASE_PASSWORD:techconditionservicepassword}
@@ -37,8 +37,8 @@ spring:
       ddl-auto: update
   cloud:
     consul:
-      host: ${CLOUD_CONSUL_HOST:localhost}
-      port: ${CLOUD_CONSUL_PORT:8500}
+      host: ${CLOUD_CONSUL_HOST:consul-ui.consul.svc.cluster.local}
+      port: ${CLOUD_CONSUL_PORT:80}
       discovery:
         instance-id: ${spring.application.name}
         prefer-ip-address: true
