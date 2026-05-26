@@ -2,8 +2,8 @@ package kz.kus.sa.tech.condition.dao.mapper;
 
 import kz.kus.sa.registry.dto.common.AbdAddressDto;
 import kz.kus.sa.registry.dto.common.IntersectionDto;
+import kz.kus.sa.registry.dto.tc.epo.TechConditionEpoStatementDto;
 import kz.kus.sa.registry.dto.tc.v1.*;
-import kz.kus.sa.tech.condition.dto.TechConditionDto;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionEntity;
 import kz.kus.sa.tech.condition.service.address.AbdAddressService;
 import kz.kus.sa.tech.condition.service.address.IntersectionService;
@@ -27,7 +27,7 @@ import java.util.UUID;
         TechConditionContractualCapacityOfTransformerMapper.class,
 },
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-public abstract class TechConditionMapper {
+public abstract class TechConditionEpoMapper {
 
     @Autowired
     private AbdAddressMapper abdAddressMapper;
@@ -63,6 +63,7 @@ public abstract class TechConditionMapper {
     @Mapping(target = "statementId", source = "dto.id")
     @Mapping(target = "statementRegistrationNumber", source = "dto.registrationNumber")
     @Mapping(target = "statementRegistrationDatetime", source = "dto.registrationDatetime")
+    @Mapping(target = "isEpo", expression = "java(java.lang.Boolean.TRUE)")
     @Mapping(target = "objectAbdAddresses", ignore = true)
     @Mapping(target = "intersections", ignore = true)
     @Mapping(target = "subConsumers", ignore = true)
@@ -70,7 +71,7 @@ public abstract class TechConditionMapper {
     @Mapping(target = "plannedEquipments", ignore = true)
     @Mapping(target = "contractualCapacityOfTransformers", ignore = true)
     @Mapping(target = "reliabilityCategories", ignore = true)
-    public abstract TechConditionEntity toEntity(TechConditionStatementDto dto);
+    public abstract TechConditionEntity toEntity(TechConditionEpoStatementDto dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "statementId", source = "dto.id")
@@ -83,12 +84,12 @@ public abstract class TechConditionMapper {
     @Mapping(target = "plannedEquipments", ignore = true)
     @Mapping(target = "contractualCapacityOfTransformers", ignore = true)
     @Mapping(target = "reliabilityCategories", ignore = true)
-    public abstract TechConditionEntity toEntity(@MappingTarget TechConditionEntity entity, TechConditionStatementDto dto);
+    public abstract TechConditionEntity toEntity(@MappingTarget TechConditionEntity entity, TechConditionEpoStatementDto dto);
 
     @Mapping(target = "id", source = "entity.statementId")
     @Mapping(target = "registrationNumber", source = "entity.statementRegistrationNumber")
     @Mapping(target = "registrationDatetime", source = "entity.statementRegistrationDatetime")
-    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.TECH_CONDITION)")
+    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.TECH_CONDITION_EPO)")
     @Mapping(target = "objectAbdAddresses", source = "id", qualifiedByName = "objectAbdAddresses")
     @Mapping(target = "intersections", source = "id", qualifiedByName = "intersections")
     @Mapping(target = "subConsumers", source = "id", qualifiedByName = "subConsumers")
@@ -96,12 +97,12 @@ public abstract class TechConditionMapper {
     @Mapping(target = "plannedEquipments", source = "id", qualifiedByName = "plannedEquipments")
     @Mapping(target = "contractualCapacityOfTransformers", source = "id", qualifiedByName = "contractualCapacityOfTransformers")
     @Mapping(target = "reliabilityCategories", source = "id", qualifiedByName = "reliabilityCategories")
-    public abstract TechConditionStatementDto toStatementDto(TechConditionEntity entity);
+    public abstract TechConditionEpoStatementDto toStatementDto(TechConditionEntity entity);
 
     @Mapping(target = "id", source = "entity.statementId")
     @Mapping(target = "registrationNumber", source = "entity.statementRegistrationNumber")
     @Mapping(target = "registrationDatetime", source = "entity.statementRegistrationDatetime")
-    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.TECH_CONDITION)")
+    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.TECH_CONDITION_EPO)")
     @Mapping(target = "objectAbdAddresses", source = "id", qualifiedByName = "objectAbdAddresses")
     @Mapping(target = "intersections", source = "id", qualifiedByName = "intersections")
     @Mapping(target = "subConsumers", source = "id", qualifiedByName = "subConsumers")
@@ -109,19 +110,7 @@ public abstract class TechConditionMapper {
     @Mapping(target = "plannedEquipments", source = "id", qualifiedByName = "plannedEquipments")
     @Mapping(target = "contractualCapacityOfTransformers", source = "id", qualifiedByName = "contractualCapacityOfTransformers")
     @Mapping(target = "reliabilityCategories", source = "id", qualifiedByName = "reliabilityCategories")
-    public abstract TechConditionStatementDto toStatementDto(@MappingTarget TechConditionStatementDto dto, TechConditionEntity entity);
-
-    @Mapping(target = "registrationNumber", source = "entity.statementRegistrationNumber")
-    @Mapping(target = "registrationDatetime", source = "entity.statementRegistrationDatetime")
-    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.TECH_CONDITION)")
-    @Mapping(target = "objectAbdAddresses", source = "id", qualifiedByName = "objectAbdAddresses")
-    @Mapping(target = "intersections", source = "id", qualifiedByName = "intersections")
-    @Mapping(target = "subConsumers", source = "id", qualifiedByName = "subConsumers")
-    @Mapping(target = "maximumLoads", source = "id", qualifiedByName = "maximumLoads")
-    @Mapping(target = "plannedEquipments", source = "id", qualifiedByName = "plannedEquipments")
-    @Mapping(target = "contractualCapacityOfTransformers", source = "id", qualifiedByName = "contractualCapacityOfTransformers")
-    @Mapping(target = "reliabilityCategories", source = "id", qualifiedByName = "reliabilityCategories")
-    public abstract TechConditionDto toDto(TechConditionEntity entity);
+    public abstract TechConditionEpoStatementDto toStatementDto(@MappingTarget TechConditionEpoStatementDto dto, TechConditionEntity entity);
 
 
     @Named("objectAbdAddresses")

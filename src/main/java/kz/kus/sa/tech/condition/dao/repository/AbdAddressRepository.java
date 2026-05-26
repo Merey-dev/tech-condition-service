@@ -18,7 +18,5 @@ public interface AbdAddressRepository extends JpaRepository<AbdAddressEntity, UU
 
     List<AbdAddressEntity> findAllByActOfDelineationRenewalId(UUID actOfDelineationRenewalId);
 
-    List<AbdAddressEntity> findAllByActOfDelineationRenewalExecutionId(UUID actOfDelineationRenewalExecutionId);
-
     List<AbdAddressEntity> findAllByActOfDelineationId(UUID actOfDelineationId);
 }

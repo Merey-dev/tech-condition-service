@@ -3,7 +3,6 @@ package kz.kus.sa.tech.condition.service.tech.condition.impl;
 import kz.kus.sa.auth.api.currentuser.CurrentUserApiService;
 import kz.kus.sa.auth.api.currentuser.dto.CurrentUserResponse;
 import kz.kus.sa.auth.api.provider.ProviderApiService;
-import kz.kus.sa.auth.api.provider.dto.ProviderDto;
 import kz.kus.sa.auth.api.provider.dto.SubdivisionDto;
 import kz.kus.sa.auth.api.user.UserApiService;
 import kz.kus.sa.auth.api.user.dto.UserDto;
@@ -15,12 +14,10 @@ import kz.kus.sa.registry.api.RegistrySignApiService;
 import kz.kus.sa.registry.dto.common.AbdAddressDto;
 import kz.kus.sa.registry.dto.common.AssignDto;
 import kz.kus.sa.registry.dto.tc.v1.TechConditionStatementDto;
-import kz.kus.sa.registry.enums.AuthProviderSubDivisionRole;
 import kz.kus.sa.registry.enums.Event;
 import kz.kus.sa.registry.enums.Source;
 import kz.kus.sa.registry.enums.Status;
 import kz.kus.sa.report.api.ReportTechConditionApiService;
-import kz.kus.sa.tech.condition.dao.entity.HistoryEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionEntity;
@@ -45,6 +42,8 @@ import kz.kus.sa.tech.condition.service.report.TechConditionReportService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionExecutionAbdAddressDecisionService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionExecutionService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionProjectService;
+import kz.kus.sa.tech.condition.statemachine.TechConditionEpoExecutionStatemachine;
+import kz.kus.sa.tech.condition.statemachine.TechConditionEpoStatemachine;
 import kz.kus.sa.tech.condition.statemachine.TechConditionExecutionStatemachine;
 import kz.kus.sa.tech.condition.statemachine.TechConditionStatemachine;
 import kz.kus.sa.tech.condition.statemachine.exception.GuardException;
@@ -52,7 +51,6 @@ import kz.kus.sa.tech.condition.statemachine.exception.UnknownEventException;
 import kz.kus.sa.tech.condition.statemachine.exception.UnknownStateException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -99,12 +97,14 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     private final TechConditionReportService techConditionReportService;
     private final TechConditionProjectService techConditionProjectService;
     private final KzharyqTechConditionService kzharyqTechConditionService;
+    private final TechConditionEpoStatemachine techConditionEpoStatemachine;
     private final TechConditionExecutionMapper techConditionExecutionMapper;
     private final ReportTechConditionApiService reportTechConditionApiService;
     private final TechConditionExecutionRepository techConditionExecutionRepository;
     private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
     private final TechConditionExecutionStatemachine techConditionExecutionStatemachine;
     private final TechConditionExecutionAbdAddressDecisionService abdAddressDecisionService;
+    private final TechConditionEpoExecutionStatemachine techConditionEpoExecutionStatemachine;
     private final TechConditionExecutionAbdAddressDecisionRepository abdAddressDecisionRepository;
 
     @Override
@@ -1206,9 +1206,14 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     private void checkState(TechConditionEntity entity, Event event) {
-        log.info("TECH CONDITION [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            techConditionStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionEpoStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION [CHECK-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
@@ -1216,9 +1221,14 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     private void changeState(TechConditionEntity entity, Event event) {
-        log.info("TECH CONDITION [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            techConditionStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionEpoStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION [CHANGE-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
@@ -1226,9 +1236,14 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     private void executionCheckState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
-        log.info("TECH CONDITION EXECUTION [CHECK-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
         try {
-            techConditionExecutionStatemachine.checkState(entity, execution, execution.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO EXECUTION [CHECK-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                techConditionEpoExecutionStatemachine.checkState(entity, execution, execution.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION EXECUTION [CHECK-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                techConditionExecutionStatemachine.checkState(entity, execution, execution.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION EXECUTION [CHECK-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
@@ -1236,9 +1251,14 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     private void executionChangeState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
-        log.info("TECH CONDITION EXECUTION [CHANGE-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
         try {
-            techConditionExecutionStatemachine.changeState(entity, execution, execution.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO EXECUTION [CHANGE-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                techConditionEpoExecutionStatemachine.changeState(entity, execution, execution.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION EXECUTION [CHANGE-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                techConditionExecutionStatemachine.changeState(entity, execution, execution.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION EXECUTION [CHANGE-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());

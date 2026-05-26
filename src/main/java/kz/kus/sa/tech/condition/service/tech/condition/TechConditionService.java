@@ -9,9 +9,9 @@ import java.util.UUID;
 
 public interface TechConditionService {
 
-    TechConditionStatementDto getByStatementId(UUID statementId);
-
     void consume(TechConditionStatementDto dto);
+
+    TechConditionStatementDto getByStatementId(UUID statementId);
 
     TechConditionDto getTechConditionByStatementId(UUID statementId);
 

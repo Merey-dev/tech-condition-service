@@ -15,8 +15,6 @@ import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionAbdAddressD
 import kz.kus.sa.tech.condition.dao.repository.TechConditionExecutionRepository;
 import kz.kus.sa.tech.condition.dto.report.TechConditionApplicationReportDto;
 import kz.kus.sa.tech.condition.dto.report.TechConditionDecisionReportDto;
-import kz.kus.sa.tech.condition.dto.report.TechConditionReasonedRefusalReportDto;
-import kz.kus.sa.tech.condition.dto.report.TechConditionTechRecommendationReportDto;
 import kz.kus.sa.tech.condition.exception.BadRequestException;
 import kz.kus.sa.tech.condition.exception.BusinessException;
 import kz.kus.sa.tech.condition.exception.ErrorCode;
@@ -64,66 +62,22 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
 
     @Override
     public TechConditionApplicationReportDto applicationReportData(UUID id) {
-        TechConditionExecutionEntity entity = findExecutionById(id);
-        TechConditionEntity techConditionEntity = entity.getTechCondition();
+        var entity = findExecutionById(id);
+        var techConditionEntity = entity.getTechCondition();
 
-        TechConditionApplicationReportDto dto = techConditionReportMapper.toApplicationReportDto(entity);
+        var dto = techConditionReportMapper.toApplicationReportDto(entity);
 
-        var providerFullName = providerFullName(techConditionEntity.getProviderId());
-        dto.setProviderFullNameRu(providerFullName.get("ru"));
-        dto.setProviderFullNameKk(providerFullName.get("kk"));
-
-        var consumerPhoneAndEmail = consumerPhoneAndEmail(techConditionEntity);
-        dto.setConsumerPhone(consumerPhoneAndEmail.get("phone"));
-        dto.setPhones(consumerPhoneAndEmail.get("phone"));
-        dto.setConsumerEmail(consumerPhoneAndEmail.get("email"));
-
-        var consumerAddress = consumerAddress(techConditionEntity);
-        dto.setConsumerAddressRu(consumerAddress.get("ru"));
-        dto.setConsumerAddressKk(consumerAddress.get("kk"));
-        dto.setFullAddressRu(consumerAddress.get("ru"));
-        dto.setFullAddressKk(consumerAddress.get("kk"));
-
-        var objectAddressData = objectAddressData(id);
-        dto.setObjectTypeRu(objectAddressData.get("objectNameRu"));
-        dto.setObjectTypeKk(objectAddressData.get("objectNameKk"));
-        dto.setObjectAddressRu(objectAddressData.get("objectAddressRu"));
-        dto.setObjectAddressKk(objectAddressData.get("objectAddressKk"));
-        dto.setOwnershipDocumentTypeRu(objectAddressData.get("ownershipDocumentTypeRu"));
-        dto.setOwnershipDocumentTypeKk(objectAddressData.get("ownershipDocumentTypeKk"));
-        dto.setCadastralNumber(objectAddressData.get("cadastralNumber"));
-        dto.setNumberOfStoreys(objectAddressData.get("storeys"));
-        dto.setBuildingArea(objectAddressData.get("totalArea"));
+        this.fillCommonFields(dto, techConditionEntity, id);
 
         HashMap<String, Object> params = new HashMap<>();
         commonReportService.setBlankHeaderInfo(techConditionEntity.getProviderId(), params);
-        setMaximumLoads(id, params);
-        setMaximumLoadsWithElectricalReceiversLoad(id, params);
-        setPlannedEquipment(id, params);
-        setSubConsumers(id, params);
-        setContractualCapacityOfTransformer(id, params);
-        setReliabilityCategoriesWithKwt(id, params);
-
-        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getConsumptionTypeCode()))
-                .ifPresent(d -> {
-                    dto.setConsumptionTypeRu(d.getNameRu());
-                    dto.setConsumptionTypeKk(d.getNameKz());
-                });
-        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getElectricalLoadTypeCode()))
-                .ifPresent(d -> {
-                    dto.setElectricalLoadTypeRu(d.getNameRu());
-                    dto.setElectricalLoadTypeKk(d.getNameKz());
-                });
-        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getVoltageLevelCode()))
-                .ifPresent(d -> {
-                    dto.setVoltageLevelRu(d.getNameRu());
-                    dto.setVoltageLevelKk(d.getNameKz());
-                });
-        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techConditionEntity.getServiceTypeCode()))
-                .ifPresent(d -> {
-                    dto.setServiceTypeRu(d.getNameRu());
-                    dto.setServiceTypeKk(d.getNameKz());
-                });
+        this.setMaximumLoads(id, params);
+        this.setMaximumLoadsWithElectricalReceiversLoad(id, params);
+        this.setPlannedEquipment(id, params);
+        this.setSubConsumers(id, params);
+        this.setContractualCapacityOfTransformer(id, params);
+        this.setReliabilityCategoriesWithKwt(id, params);
+        this.fillDictionaryFields(dto, techConditionEntity);
 
         dto.setParams(params);
         return dto;
@@ -131,10 +85,10 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
 
     @Override
     public TechConditionDecisionReportDto getDecisionReportData(UUID executionId) {
-        TechConditionExecutionEntity execution = findExecutionById(executionId);
-        TechConditionEntity techCondition = execution.getTechCondition();
+        var execution = findExecutionById(executionId);
+        var techCondition = execution.getTechCondition();
 
-        List<TechConditionExecutionAbdAddressDecisionEntity> decisions = abdAddressDecisionRepository.findAllByTechConditionExecutionId(executionId);
+        var decisions = abdAddressDecisionRepository.findAllByTechConditionExecutionId(executionId);
 
         if (decisions.isEmpty()) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
@@ -159,27 +113,25 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
                     .filter(d -> d.getDecisionType() == REASONED_REFUSAL).count();
 
             if (trCount >= rrCount) {
-                return buildTechRecommendationReport(executionId, techCondition,
-                        decisions.stream()
-                                .filter(d -> d.getDecisionType() == TECHNICAL_RECOMMENDATION)
-                                .collect(Collectors.toList()),
-                        params);
+                var filterDecisions = decisions.stream()
+                        .filter(d -> d.getDecisionType() == TECHNICAL_RECOMMENDATION)
+                        .collect(Collectors.toList());
+                return buildTechRecommendationReport(executionId, techCondition, filterDecisions, params);
             } else {
-                return buildReasonedRefusalReport(executionId, techCondition,
-                        decisions.stream()
-                                .filter(d -> d.getDecisionType() == REASONED_REFUSAL)
-                                .collect(Collectors.toList()),
-                        params);
+                var filterDecisions = decisions.stream()
+                        .filter(d -> d.getDecisionType() == REASONED_REFUSAL)
+                        .collect(Collectors.toList());
+                return buildReasonedRefusalReport(executionId, techCondition, filterDecisions, params);
             }
         }
     }
 
     @Override
     public TechConditionDecisionReportDto getDecisionReportDataByAddress(UUID executionId, UUID abdAddressId) {
-        TechConditionExecutionEntity execution = findExecutionById(executionId);
-        TechConditionEntity techCondition = execution.getTechCondition();
+        var execution = findExecutionById(executionId);
+        var techCondition = execution.getTechCondition();
 
-        TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
+        var decision = abdAddressDecisionRepository
                 .findByTechConditionExecutionIdAndObjectAbdAddressId(executionId, abdAddressId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
 
@@ -201,16 +153,16 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
                                                                          TechConditionEntity techCondition,
                                                                          List<TechConditionExecutionAbdAddressDecisionEntity> decisions,
                                                                          HashMap<String, Object> params) {
-        TechConditionExecutionAbdAddressDecisionEntity firstDecision = decisions.stream()
+        var firstDecision = decisions.stream()
                 .filter(d -> nonNull(d.getProject()))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.DECISION_NOT_FORMED.name()));
 
-        TechConditionTechRecommendationReportDto techRecommendationDto = techConditionReportMapper.toTechnicalRecommendationReportDto(firstDecision);
+        var techRecommendationDto = techConditionReportMapper.toTechnicalRecommendationReportDto(firstDecision);
 
-        TechConditionDecisionReportDto dto = techConditionReportMapper.toDecisionReportDto(techRecommendationDto);
+        var dto = techConditionReportMapper.toDecisionReportDto(techRecommendationDto);
 
-        fillCommonFields(dto, techCondition);
+        this.fillCommonFields(dto, techCondition);
 
         var addressData = objectAddressDataFromDecisions(decisions);
         dto.setObjectNameRu(addressData.get("objectNameRu"));
@@ -218,22 +170,17 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
         dto.setObjectAddressRu(addressData.get("objectAddressRu"));
         dto.setObjectAddressKk(addressData.get("objectAddressKk"));
 
-        setSubConsumers(techCondition.getId(), params);
-        setReliabilityCategoriesWithKwt(techCondition.getId(), params);
+        this.setSubConsumers(techCondition.getId(), params);
+        this.setReliabilityCategoriesWithKwt(techCondition.getId(), params);
+        this.fillDictionaryFields(dto, techCondition);
 
-        fillDictionaryFields(dto, techCondition);
+        commonReportService.setSystemOperatorRequirementFile(techRecommendationDto.getSystemOperatorRequirementFile(), params);
 
-        commonReportService.setSystemOperatorRequirementFile(
-                techRecommendationDto.getSystemOperatorRequirementFile(), params);
-
-        dto.setSigns(getSignsByIdAndDocType(
-                techCondition.getStatementId(),
-                Collections.singletonList(SignedDocType.TC_PROJECT)));
+        dto.setSigns(getSignsByIdAndDocType(techCondition.getStatementId(), Collections.singletonList(SignedDocType.TC_PROJECT)));
         dto.setDecisionType(TECHNICAL_RECOMMENDATION);
         dto.setParams(params);
 
-        log.info("REPORT [TECHNICAL RECOMMENDATION]: executionId=[{}], tcId=[{}]",
-                executionId, techCondition.getId());
+        log.info("REPORT [TECHNICAL RECOMMENDATION]: executionId=[{}], tcId=[{}]", executionId, techCondition.getId());
 
         return dto;
     }
@@ -244,27 +191,25 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
                                                                       TechConditionEntity techCondition,
                                                                       List<TechConditionExecutionAbdAddressDecisionEntity> decisions,
                                                                       HashMap<String, Object> params) {
-        TechConditionExecutionAbdAddressDecisionEntity firstDecision = decisions.get(0);
+        var firstDecision = decisions.get(0);
 
-        TechConditionReasonedRefusalReportDto reasonedRefusalDto =
-                techConditionReportMapper.toTechConditionReasonedRefusalReportDto(firstDecision);
+        var reasonedRefusalDto = techConditionReportMapper.toTechConditionReasonedRefusalReportDto(firstDecision);
 
         if (decisions.size() > 1) {
-            String regNumbers = decisions.stream()
-                    .map(TechConditionExecutionAbdAddressDecisionEntity
-                            ::getReasonForRefusalRegistrationNumber)
+            var regNumbers = decisions.stream()
+                    .map(TechConditionExecutionAbdAddressDecisionEntity::getReasonForRefusalRegistrationNumber)
                     .filter(StringUtils::isNotEmpty)
                     .collect(Collectors.joining(", "));
             reasonedRefusalDto.setRegistrationNumber(regNumbers);
 
-            String reasonRu = decisions.stream()
+            var reasonRu = decisions.stream()
                     .map(TechConditionExecutionAbdAddressDecisionEntity::getReasonForRefusalRu)
                     .filter(StringUtils::isNotEmpty)
                     .distinct()
                     .collect(Collectors.joining("\n"));
             reasonedRefusalDto.setReasonForRefusalRu(reasonRu);
 
-            String reasonKk = decisions.stream()
+            var reasonKk = decisions.stream()
                     .map(TechConditionExecutionAbdAddressDecisionEntity::getReasonForRefusalKk)
                     .filter(StringUtils::isNotEmpty)
                     .distinct()
@@ -272,9 +217,9 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
             reasonedRefusalDto.setReasonForRefusalKk(reasonKk);
         }
 
-        TechConditionDecisionReportDto dto = techConditionReportMapper.toDecisionReportDto(reasonedRefusalDto);
+        var dto = techConditionReportMapper.toDecisionReportDto(reasonedRefusalDto);
 
-        fillCommonFields(dto, techCondition);
+        this.fillCommonFields(dto, techCondition);
 
         var addressData = objectAddressDataFromDecisions(decisions);
         dto.setObjectNameRu(addressData.get("objectNameRu"));
@@ -293,6 +238,34 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
 
     // ─── ОБЩИЕ МЕТОДЫ ──────────────────────────────────────────────────────
 
+    private void fillCommonFields(TechConditionApplicationReportDto dto, TechConditionEntity techCondition, UUID id) {
+        var providerFullName = providerFullName(techCondition.getProviderId());
+        dto.setProviderFullNameRu(providerFullName.get("ru"));
+        dto.setProviderFullNameKk(providerFullName.get("kk"));
+
+        var consumerPhoneAndEmail = consumerPhoneAndEmail(techCondition);
+        dto.setConsumerPhone(consumerPhoneAndEmail.get("phone"));
+        dto.setPhones(consumerPhoneAndEmail.get("phone"));
+        dto.setConsumerEmail(consumerPhoneAndEmail.get("email"));
+
+        var consumerAddress = consumerAddress(techCondition);
+        dto.setConsumerAddressRu(consumerAddress.get("ru"));
+        dto.setConsumerAddressKk(consumerAddress.get("kk"));
+        dto.setFullAddressRu(consumerAddress.get("ru"));
+        dto.setFullAddressKk(consumerAddress.get("kk"));
+
+        var objectAddressData = objectAddressData(id);
+        dto.setObjectTypeRu(objectAddressData.get("objectNameRu"));
+        dto.setObjectTypeKk(objectAddressData.get("objectNameKk"));
+        dto.setObjectAddressRu(objectAddressData.get("objectAddressRu"));
+        dto.setObjectAddressKk(objectAddressData.get("objectAddressKk"));
+        dto.setOwnershipDocumentTypeRu(objectAddressData.get("ownershipDocumentTypeRu"));
+        dto.setOwnershipDocumentTypeKk(objectAddressData.get("ownershipDocumentTypeKk"));
+        dto.setCadastralNumber(objectAddressData.get("cadastralNumber"));
+        dto.setNumberOfStoreys(objectAddressData.get("storeys"));
+        dto.setBuildingArea(objectAddressData.get("totalArea"));
+    }
+
     private void fillCommonFields(TechConditionDecisionReportDto dto, TechConditionEntity techCondition) {
         var providerFullName = providerFullName(techCondition.getProviderId());
         dto.setProviderFullNameRu(providerFullName.get("ru"));
@@ -307,34 +280,68 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
         dto.setConsumerAddressKk(consumerAddress.get("kk"));
     }
 
+    private void fillDictionaryFields(TechConditionApplicationReportDto dto, TechConditionEntity techCondition) {
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getConsumptionTypeCode()))
+                .ifPresent(d -> {
+                    dto.setConsumptionTypeRu(d.getNameRu());
+                    dto.setConsumptionTypeKk(d.getNameKz());
+                });
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getElectricalLoadTypeCode()))
+                .ifPresent(d -> {
+                    dto.setElectricalLoadTypeRu(d.getNameRu());
+                    dto.setElectricalLoadTypeKk(d.getNameKz());
+                });
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getVoltageLevelCode()))
+                .ifPresent(d -> {
+                    dto.setVoltageLevelRu(d.getNameRu());
+                    dto.setVoltageLevelKk(d.getNameKz());
+                });
+        Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getServiceTypeCode()))
+                .ifPresent(d -> {
+                    dto.setServiceTypeRu(d.getNameRu());
+                    dto.setServiceTypeKk(d.getNameKz());
+                });
+    }
+
     private void fillDictionaryFields(TechConditionDecisionReportDto dto, TechConditionEntity techCondition) {
         Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getTechConditionReasonCode()))
-                .ifPresent(d -> { dto.setReasonRu(d.getNameRu()); dto.setReasonKk(d.getNameKz()); });
-
+                .ifPresent(d -> {
+                    dto.setReasonRu(d.getNameRu());
+                    dto.setReasonKk(d.getNameKz());
+                });
         Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getConsumptionTypeCode()))
-                .ifPresent(d -> { dto.setConsumptionTypeRu(d.getNameRu()); dto.setConsumptionTypeKk(d.getNameKz()); });
-
+                .ifPresent(d -> {
+                    dto.setConsumptionTypeRu(d.getNameRu());
+                    dto.setConsumptionTypeKk(d.getNameKz());
+                });
         Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getElectricalLoadTypeCode()))
-                .ifPresent(d -> { dto.setElectricalLoadTypeRu(d.getNameRu()); dto.setElectricalLoadTypeKk(d.getNameKz()); });
-
+                .ifPresent(d -> {
+                    dto.setElectricalLoadTypeRu(d.getNameRu());
+                    dto.setElectricalLoadTypeKk(d.getNameKz());
+                });
         Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getServiceTypeCode()))
-                .ifPresent(d -> { dto.setServiceTypeRu(d.getNameRu()); dto.setServiceTypeKk(d.getNameKz()); });
-
+                .ifPresent(d -> {
+                    dto.setServiceTypeRu(d.getNameRu());
+                    dto.setServiceTypeKk(d.getNameKz());
+                });
         Optional.ofNullable(dictionaryApiService.findDictionaryValueByCode(techCondition.getVoltageLevelCode()))
-                .ifPresent(d -> { dto.setVoltageLevelRu(d.getNameRu()); dto.setVoltageLevelKk(d.getNameKz()); });
+                .ifPresent(d -> {
+                    dto.setVoltageLevelRu(d.getNameRu());
+                    dto.setVoltageLevelKk(d.getNameKz());
+                });
     }
 
     private Map<String, String> objectAddressDataFromDecisions(List<TechConditionExecutionAbdAddressDecisionEntity> decisions) {
         Map<String, String> result = new HashMap<>();
         try {
-            List<AbdAddressEntity> addresses = decisions.stream()
+            var addresses = decisions.stream()
                     .map(TechConditionExecutionAbdAddressDecisionEntity::getObjectAbdAddress)
                     .collect(Collectors.toList());
 
-            StringJoiner joinerNameRu = new StringJoiner(", ");
-            StringJoiner joinerNameKk = new StringJoiner(", ");
-            StringJoiner joinerAddressRu = new StringJoiner(", ");
-            StringJoiner joinerAddressKk = new StringJoiner(", ");
+            var joinerNameRu = new StringJoiner(", ");
+            var joinerNameKk = new StringJoiner(", ");
+            var joinerAddressRu = new StringJoiner(", ");
+            var joinerAddressKk = new StringJoiner(", ");
 
             addresses.forEach(a -> {
                 joinerNameRu.add(StringUtils.defaultString(a.getEndUseRu()));
@@ -404,11 +411,11 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
         try {
             String arRcaCode;
             if (ORGANIZATION.equals(techCondition.getConsumerType())) {
-                var person = personApi.getPerson(techCondition.getConsumerIinBin());
-                arRcaCode = person.getRegistrationAddress().getAddressArCode();
-            } else {
                 var organization = organizationApi.getOrganization(techCondition.getConsumerIinBin());
                 arRcaCode = organization.getAddressInfo().getRca();
+            } else {
+                var person = personApi.getPerson(techCondition.getConsumerIinBin());
+                arRcaCode = person.getRegistrationAddress().getAddressArCode();
             }
             var address = arApiService.fullAddress(arRcaCode);
             result.put("ru", address.getShortAddressRu());
@@ -424,7 +431,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     private Map<String, String> objectAddressData(UUID techConditionExecutionId) {
         Map<String, String> result = new HashMap<>();
         try {
-            List<AbdAddressEntity> list = abdAddressService.getByTechConditionExecutionId(techConditionExecutionId);
+            var list = abdAddressService.getByTechConditionExecutionId(techConditionExecutionId);
             if (!list.isEmpty()) {
                 StringJoiner joinerNameRu = new StringJoiner(",");
                 StringJoiner joinerNameKk = new StringJoiner(",");
@@ -476,7 +483,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     private void setMaximumLoads(UUID techConditionId, HashMap<String, Object> params) {
-        List<TechConditionMaximumLoadEntity> list = techConditionMaximumLoadService.getByTechConditionId(techConditionId);
+        var list = techConditionMaximumLoadService.getByTechConditionId(techConditionId);
         if (!list.isEmpty()) {
             StringJoiner joinerRu = new StringJoiner(",\n");
             StringJoiner joinerKk = new StringJoiner(",\n");
@@ -492,7 +499,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     private void setMaximumLoadsWithElectricalReceiversLoad(UUID techConditionId, HashMap<String, Object> params) {
-        List<TechConditionMaximumLoadEntity> list = techConditionMaximumLoadService.getByTechConditionId(techConditionId);
+        var list = techConditionMaximumLoadService.getByTechConditionId(techConditionId);
         if (!list.isEmpty()) {
             StringJoiner joinerRu = new StringJoiner(",\n");
             StringJoiner joinerKk = new StringJoiner(",\n");
@@ -511,7 +518,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     private void setPlannedEquipment(UUID techConditionId, HashMap<String, Object> params) {
-        List<TechConditionPlannedEquipmentEntity> list = techConditionPlannedEquipmentService.getByTechConditionId(techConditionId);
+        var list = techConditionPlannedEquipmentService.getByTechConditionId(techConditionId);
         if (!list.isEmpty()) {
             StringJoiner joinerRu = new StringJoiner(",\n");
             StringJoiner joinerKk = new StringJoiner(",\n");
@@ -529,7 +536,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     private void setSubConsumers(UUID techConditionId, HashMap<String, Object> params) {
-        List<TechConditionSubConsumerEntity> list = techConditionSubConsumerService.getByTechConditionId(techConditionId);
+        var list = techConditionSubConsumerService.getByTechConditionId(techConditionId);
         if (!list.isEmpty()) {
             StringJoiner joinerRu = new StringJoiner(",\n");
             StringJoiner joinerKk = new StringJoiner(",\n");
@@ -547,7 +554,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     private void setContractualCapacityOfTransformer(UUID techConditionId, HashMap<String, Object> params) {
-        List<TechConditionContractualCapacityOfTransformerEntity> list = techConditionContractualCapacityOfTransformerService.getByTechConditionId(techConditionId);
+        var list = techConditionContractualCapacityOfTransformerService.getByTechConditionId(techConditionId);
         StringJoiner joiner = new StringJoiner(",\n");
         if (!list.isEmpty()) {
             for (TechConditionContractualCapacityOfTransformerEntity item : list) {
@@ -558,7 +565,7 @@ public class TechConditionReportServiceImpl implements TechConditionReportServic
     }
 
     private void setReliabilityCategoriesWithKwt(UUID techConditionId, HashMap<String, Object> params) {
-        List<TechConditionReliabilityCategoryEntity> list = techConditionReliabilityCategoryService.getByTechConditionId(techConditionId);
+        var list = techConditionReliabilityCategoryService.getByTechConditionId(techConditionId);
         if (!list.isEmpty()) {
             StringJoiner joinerRu = new StringJoiner(",\n");
             StringJoiner joinerKk = new StringJoiner(",\n");

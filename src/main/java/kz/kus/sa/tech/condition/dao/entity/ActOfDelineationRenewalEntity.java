@@ -88,6 +88,11 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
     @ToString.Exclude
     private List<AbdAddressEntity> objectAbdAddresses;
 
+    /** Per-address decisions */
+    @OneToMany(mappedBy = "actOfDelineationRenewal", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<ActOfDelineationRenewalAbdAddressDecisionEntity> abdAddressDecisions;
+
     /** Ответственный за электрохозяйство */
     @Column(name = "responsible_for_electrical_equipment")
     private String responsibleForElectricalEquipment;
@@ -98,9 +103,7 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
 
 
     /**
-     * ПОДПИСЬ ПОТРЕБИТЕЛЯ
-     * <p>
-     * Тип подписи
+     * ПОДПИСЬ ПОТРЕБИТЕЛЯ (на уровне заявления — для совместимости со старой схемой)
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "consumer_signed_type", length = 50)
@@ -121,7 +124,7 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
     private ExternalFileEmbedded consumerSignFile;
 
 
-    /** АКТ */
+    /** АКТ (последний/основной — оставлено для обратной совместимости) */
     @Column(name = "act_id")
     private UUID actId;
 
@@ -213,9 +216,7 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
     private ExternalUserEmbedded executor;
 
 
-    /** ПОДПИСЬ РУКОВОДИТЕЛЯ
-     * <p>
-     * Дата / время согласования руководителя */
+    /** ПОДПИСЬ РУКОВОДИТЕЛЯ (для совместимости — фактически на уровне decision) */
     @Column(name = "manager_approved_datetime", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime managerApprovedDatetime;
 
@@ -232,9 +233,7 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
     private ExternalUserEmbedded manager;
 
 
-    /** ПОДПИСЬ ДИРЕКТОРА
-     * <p>
-     * Дата / время согласования директора */
+    /** ПОДПИСЬ ДИРЕКТОРА (для совместимости — фактически на уровне decision) */
     @Column(name = "director_approved_datetime", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime directorApprovedDatetime;
 

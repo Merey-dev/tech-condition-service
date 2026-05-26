@@ -14,9 +14,10 @@ tech-condition:
       notification: ${NOTIFICATION_IN_TOPIC:sa-all-notification-in-dev}
       tech-condition:
         sa-in: ${TECH_CONDITION_TOPICS_SA_IN_TECH_CONDITION:sa-tech-condition-in-dev}
-#        sa-out: ${TECH_CONDITION_TOPICS_SA_OUT_TECH_CONDITION:sa-tech-condition-out-dev}
         kzharyq-tc-registered-in: ${TECH_CONDITION_KZHARYQ_TC_REGISTERED_IN_TOPIC:sa-tc-kzharyq-tc-registered-in-dev}
         kzharyq-tc-complete-in: ${TECH_CONDITION_KZHARYQ_TC_COMPLETE_IN:sa-tc-kzharyq-tc-complete-in-dev}
+      tech-condition-epo:
+        sa-in: ${TECH_CONDITION_TOPICS_SA_IN_TECH_CONDITION_EPO:sa-tech-condition-epo-in-dev}
       renewal:
         sa-in: ${TECH_CONDITION_TOPICS_SA_IN_RENEWAL:sa-renewal-in-dev}
 spring:

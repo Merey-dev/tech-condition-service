@@ -6,8 +6,10 @@ import kz.kus.sa.auth.api.provider.enums.ActivityType;
 import kz.kus.sa.registry.api.RegistryGenerateNumberApiService;
 import kz.kus.sa.registry.enums.RegistrationNumberActType;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationEntity;
+import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalEntity;
 import kz.kus.sa.tech.condition.dao.mapper.ActOfDelineationMapper;
+import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalAbdAddressDecisionRepository;
 import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalRepository;
 import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRepository;
 import kz.kus.sa.tech.condition.dto.act.ActOfDelineationCreateDto;
@@ -31,7 +33,6 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static kz.kus.sa.tech.condition.dao.specification.ActOfDelineationSpecification.*;
-import static kz.kus.sa.tech.condition.dao.specification.ActOfDelineationSpecification.byIdentifierList;
 import static kz.kus.sa.tech.condition.util.CommonUtils.isNullOrEmpty;
 import static org.springframework.data.jpa.domain.Specification.where;
 
@@ -46,6 +47,7 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
     private final ActOfDelineationRepository actOfDelineationRepository;
     private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
     private final ActOfDelineationRenewalRepository actOfDelineationRenewalRepository;
+    private final ActOfDelineationRenewalAbdAddressDecisionRepository decisionRepository;
 
     @Override
     public Page<ActOfDelineationDto> getAll(ActOfDelineationSearchDto search, Pageable pageable) {
@@ -63,15 +65,31 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         this.setRegistrationNumber(entity, dto.getProviderId());
 
         var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
+        entity.setActOfDelineationRenewal(renewal);
+
+        // Привязка к decision: ищем decision по renewal + первому адресу из dto
+        ActOfDelineationRenewalAbdAddressDecisionEntity decision = resolveDecisionForCreation(dto, renewal.getId());
+        if (decision != null) {
+            entity.setDecision(decision);
+        }
+
+        // Сохраняем акт
+        entity = baseSave(entity);
+
+        // Привязываем decision к акту с обратной стороны
+        if (decision != null) {
+            decision.setActOfDelineation(entity);
+            decisionRepository.save(decision);
+        }
+
+        // Сохраняем последние данные акта на заявлении (для совместимости со старыми отчётами)
         renewal.setActId(entity.getId());
         renewal.setActRegistrationNumber(entity.getRegistrationNumber());
         renewal.setActDate(entity.getPreparationDatetime().toLocalDate());
-        this.baseSave(renewal);
+        actOfDelineationRenewalRepository.save(renewal);
 
-        entity.setActOfDelineationRenewal(renewal);
-
-        entity = baseSave(entity);
-        log.info("ACT OF DELINEATION [CREATED]: id = [{}]", entity.getId());
+        log.info("ACT OF DELINEATION [CREATED]: id = [{}], decisionId = [{}]",
+                entity.getId(), decision != null ? decision.getId() : null);
         return actOfDelineationMapper.toDto(entity);
     }
 
@@ -97,6 +115,19 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
     public ActOfDelineationEntity findByRenewalId(UUID renewalId) {
         return actOfDelineationRepository.findByActOfDelineationRenewalId(renewalId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
+    }
+
+    private ActOfDelineationRenewalAbdAddressDecisionEntity resolveDecisionForCreation(ActOfDelineationCreateDto dto, UUID renewalId) {
+        if (isNullOrEmpty(dto.getObjectAbdAddresses())) {
+            return null;
+        }
+        UUID abdAddressId = dto.getObjectAbdAddresses().get(0).getId();
+        if (abdAddressId == null) {
+            return null;
+        }
+        return decisionRepository
+                .findByActOfDelineationRenewalIdAndObjectAbdAddressId(renewalId, abdAddressId)
+                .orElse(null);
     }
 
     private void setRegistrationNumber(ActOfDelineationEntity entity, UUID providerId) {
@@ -144,14 +175,5 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         }
         entity.setLastModifiedDatetime(now);
         return actOfDelineationRepository.save(entity);
-    }
-
-    private ActOfDelineationRenewalEntity baseSave(ActOfDelineationRenewalEntity entity) {
-        OffsetDateTime now = OffsetDateTime.now();
-        if (isNull(entity.getCreatedDatetime())) {
-            entity.setCreatedDatetime(now);
-        }
-        entity.setLastModifiedDatetime(now);
-        return actOfDelineationRenewalRepository.save(entity);
     }
 }

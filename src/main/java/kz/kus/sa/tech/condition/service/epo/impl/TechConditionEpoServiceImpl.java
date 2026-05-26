@@ -1,4 +1,4 @@
-package kz.kus.sa.tech.condition.service.tech.condition.impl;
+package kz.kus.sa.tech.condition.service.epo.impl;
 
 import kz.kus.commons.enums.ConsumerType;
 import kz.kus.sa.auth.api.calendar.CalendarEventApiService;
@@ -14,7 +14,7 @@ import kz.kus.sa.consumer.api.ConsumerApiService;
 import kz.kus.sa.registry.api.RegistryApiService;
 import kz.kus.sa.registry.dto.common.AssignDto;
 import kz.kus.sa.registry.dto.common.FileCreateDto;
-import kz.kus.sa.registry.dto.tc.v1.TechConditionStatementDto;
+import kz.kus.sa.registry.dto.tc.epo.TechConditionEpoStatementDto;
 import kz.kus.sa.registry.dto.v1.StatementDto;
 import kz.kus.sa.registry.enums.AuthProviderSubDivisionRole;
 import kz.kus.sa.registry.enums.Event;
@@ -22,7 +22,6 @@ import kz.kus.sa.tech.condition.dao.entity.TechConditionEntity;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionEntity;
 import kz.kus.sa.tech.condition.dao.mapper.*;
 import kz.kus.sa.tech.condition.dao.repository.TechConditionRepository;
-import kz.kus.sa.tech.condition.dto.TechConditionDto;
 import kz.kus.sa.tech.condition.enums.ExecutionStatus;
 import kz.kus.sa.tech.condition.enums.TechConditionExecutionType;
 import kz.kus.sa.tech.condition.exception.BadRequestException;
@@ -31,9 +30,11 @@ import kz.kus.sa.tech.condition.exception.ErrorCode;
 import kz.kus.sa.tech.condition.exception.NotFoundException;
 import kz.kus.sa.tech.condition.service.address.AbdAddressService;
 import kz.kus.sa.tech.condition.service.address.IntersectionService;
+import kz.kus.sa.tech.condition.service.epo.TechConditionEpoService;
 import kz.kus.sa.tech.condition.service.intagration.KzharyqTechConditionService;
 import kz.kus.sa.tech.condition.service.notification.NotificationService;
 import kz.kus.sa.tech.condition.service.tech.condition.*;
+import kz.kus.sa.tech.condition.statemachine.TechConditionEpoStatemachine;
 import kz.kus.sa.tech.condition.statemachine.TechConditionStatemachine;
 import kz.kus.sa.tech.condition.statemachine.exception.GuardException;
 import kz.kus.sa.tech.condition.statemachine.exception.UnknownEventException;
@@ -61,8 +62,8 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class TechConditionServiceImpl implements TechConditionService {
-
+public class TechConditionEpoServiceImpl implements TechConditionEpoService {
+    
     private final UserApiService userApiService;
     private final AbdAddressMapper abdAddressMapper;
     private final AbdAddressService abdAddressService;
@@ -72,19 +73,19 @@ public class TechConditionServiceImpl implements TechConditionService {
     private final ExternalUserMapper externalUserMapper;
     private final ExternalFileMapper externalFileMapper;
     private final IntersectionMapper intersectionMapper;
-    private final TechConditionMapper techConditionMapper;
     private final IntersectionService intersectionService;
     private final NotificationService notificationService;
     private final CurrentUserApiService currentUserApiService;
+    private final TechConditionEpoMapper techConditionEpoMapper;
     private final TechConditionRepository techConditionRepository;
     private final CalendarEventApiService calendarEventApiService;
     private final TechConditionSubConsumerMapper subConsumerMapper;
     private final TechConditionMaximumLoadMapper maximumLoadMapper;
     private final TechConditionSubConsumerService subConsumerService;
     private final TechConditionMaximumLoadService maximumLoadService;
-    private final TechConditionStatemachine techConditionStatemachine;
     private final ExternalSubdivisionMapper externalSubdivisionMapper;
     private final KzharyqTechConditionService kzharyqTechConditionService;
+    private final TechConditionEpoStatemachine techConditionEpoStatemachine;
     private final TechConditionPlannedEquipmentMapper plannedEquipmentMapper;
     private final TechConditionExecutionService techConditionExecutionService;
     private final TechConditionPlannedEquipmentService plannedEquipmentService;
@@ -92,9 +93,9 @@ public class TechConditionServiceImpl implements TechConditionService {
     private final TechConditionReliabilityCategoryService reliabilityCategoryService;
     private final TechConditionContractualCapacityOfTransformerMapper contractualCapacityOfTransformerMapper;
     private final TechConditionContractualCapacityOfTransformerService contractualCapacityOfTransformerService;
-
+    
     @Override
-    public void consume(TechConditionStatementDto dto) {
+    public void consume(TechConditionEpoStatementDto dto) {
         switch (dto.getEvent()) {
             case CREATE:
                 create(dto);
@@ -120,8 +121,8 @@ public class TechConditionServiceImpl implements TechConditionService {
         }
     }
 
-    private void create(TechConditionStatementDto dto) {
-        TechConditionEntity entity = techConditionMapper.toEntity(dto);
+    private void create(TechConditionEpoStatementDto dto) {
+        TechConditionEntity entity = techConditionEpoMapper.toEntity(dto);
 
         entity = baseSave(entity);
 
@@ -135,12 +136,12 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         changeState(entity, null, dto.getEvent());
 
-        log.info("TECH CONDITION [CREATED]: id = [{}]", entity.getId());
+        log.info("TECH CONDITION EPO [CREATED]: id = [{}]", entity.getId());
     }
 
-    private void update(TechConditionStatementDto dto) {
+    private void update(TechConditionEpoStatementDto dto) {
         TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
+        TechConditionEntity entity = techConditionEpoMapper.toEntity(dbEntity, dto);
 
         checkState(entity, null, dto.getEvent());
 
@@ -154,13 +155,13 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         changeState(entity, null, dto.getEvent());
 
-        log.info("TECH CONDITION [UPDATED]: id = [{}]", entity.getId());
+        log.info("TECH CONDITION EPO [UPDATED]: id = [{}]", entity.getId());
         baseSave(entity);
     }
 
-    private void delete(TechConditionStatementDto dto) {
+    private void delete(TechConditionEpoStatementDto dto) {
         TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
+        TechConditionEntity entity = techConditionEpoMapper.toEntity(dbEntity, dto);
 
         checkState(entity, null, dto.getEvent());
 
@@ -168,35 +169,35 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         changeState(entity, null, dto.getEvent());
 
-        log.info("TECH CONDITION [DELETED]: id = [{}]", entity.getId());
+        log.info("TECH CONDITION EPO [DELETED]: id = [{}]", entity.getId());
         baseSave(entity);
     }
 
-    private void addConsumerSign(TechConditionStatementDto dto) {
+    private void addConsumerSign(TechConditionEpoStatementDto dto) {
         TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
+        TechConditionEntity entity = techConditionEpoMapper.toEntity(dbEntity, dto);
 
         checkState(entity, null, dto.getEvent());
         changeState(entity, null, dto.getEvent());
 
-        log.info("TECH CONDITION [ADDED CONSUMER SIGN]: id = [{}]", entity.getId());
+        log.info("TECH CONDITION EPO [ADDED CONSUMER SIGN]: id = [{}]", entity.getId());
         baseSave(entity);
     }
 
-    private void deleteConsumerSign(TechConditionStatementDto dto) {
+    private void deleteConsumerSign(TechConditionEpoStatementDto dto) {
         TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
+        TechConditionEntity entity = techConditionEpoMapper.toEntity(dbEntity, dto);
 
         checkState(entity, null, dto.getEvent());
         changeState(entity, null, dto.getEvent());
 
-        log.info("TECH CONDITION [DELETED CONSUMER SIGN]: id = [{}]", entity.getId());
+        log.info("TECH CONDITION EPO [DELETED CONSUMER SIGN]: id = [{}]", entity.getId());
         baseSave(entity);
     }
 
-    private void register(TechConditionStatementDto dto) {
+    private void register(TechConditionEpoStatementDto dto) {
         TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
+        TechConditionEntity entity = techConditionEpoMapper.toEntity(dbEntity, dto);
 
         checkState(entity, null, dto.getEvent());
 
@@ -209,7 +210,7 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         entity = baseSave(entity);
 
-        log.info("TECH CONDITION [REGISTERED]: id = [{}]", entity.getId());
+        log.info("TECH CONDITION EPO [REGISTERED]: id = [{}]", entity.getId());
         updateData(entity, dto.getEvent());
 
         kzharyqTechConditionService.sendRegisteredRequest(entity);
@@ -229,12 +230,12 @@ public class TechConditionServiceImpl implements TechConditionService {
             String errorCode = subDivisions.isEmpty()
                     ? ErrorCode.EXECUTOR_SUBDIVISION_NOT_FOUND.name()
                     : ErrorCode.TOO_MANY_EXECUTOR_SUBDIVISIONS.name();
-            log.error("TECH CONDITION ERROR [AUTO ASSIGNING]: id = [{}], error = [{}]", entity.getId(), errorCode);
+            log.error("TECH CONDITION EPO ERROR [AUTO ASSIGNING]: id = [{}], error = [{}]", entity.getId(), errorCode);
             throw new BusinessException(errorCode);
         }
 
         SubdivisionDto subDivision = subDivisions.get(0);
-        log.info("TECH CONDITION [AUTO ASSIGNED]: id = [{}], registration number = [{}], executor division id = [{}]",
+        log.info("TECH CONDITION EPO [AUTO ASSIGNED]: id = [{}], registration number = [{}], executor division id = [{}]",
                 entity.getId(), entity.getStatementRegistrationNumber(), subDivision.getId());
 
         autoAssignDivision(entity,
@@ -280,7 +281,7 @@ public class TechConditionServiceImpl implements TechConditionService {
             }
         }
         if (assignees.isEmpty()) {
-            log.error("ERROR TECH CONDITION [ASSIGNING]: id = [{}], error = [{}]", entity.getId(), ErrorCode.NO_USERS_TO_ASSIGN.name());
+            log.error("ERROR TECH CONDITION EPO [ASSIGNING]: id = [{}], error = [{}]", entity.getId(), ErrorCode.NO_USERS_TO_ASSIGN.name());
             throw new BadRequestException(ErrorCode.NO_USERS_TO_ASSIGN.name());
         }
 
@@ -301,7 +302,7 @@ public class TechConditionServiceImpl implements TechConditionService {
         entity.setRelatedUsers(new ArrayList<>(relatedUsers));
         entity.setHasActiveExecutions(true);
 
-        log.info("TECH CONDITION [ASSIGNED]: id = [{}], registration number = [{}], type = [{}], executors = [{}], divisions = [{}]",
+        log.info("TECH CONDITION EPO [ASSIGNED]: id = [{}], registration number = [{}], type = [{}], executors = [{}], divisions = [{}]",
                 entity.getId(), entity.getStatementRegistrationNumber(), dto.getEvent(), dto.getExecutors(), dto.getDivisions());
         entity = baseSave(entity);
 
@@ -311,13 +312,8 @@ public class TechConditionServiceImpl implements TechConditionService {
     }
 
     @Override
-    public TechConditionStatementDto getByStatementId(UUID statementId) {
-        return techConditionMapper.toStatementDto(findByStatementId(statementId));
-    }
-
-    @Override
-    public TechConditionDto getTechConditionByStatementId(UUID statementId) {
-        return techConditionMapper.toDto(findByStatementId(statementId));
+    public TechConditionEpoStatementDto getByStatementId(UUID statementId) {
+        return techConditionEpoMapper.toStatementDto(findByStatementId(statementId));
     }
 
     @Override
@@ -431,7 +427,7 @@ public class TechConditionServiceImpl implements TechConditionService {
         }
 
         if (assignees.isEmpty()) {
-            log.error("ERROR TECH CONDITION [ASSIGNING]: id = [{}], error = [{}]", entity.getId(), ErrorCode.NO_USERS_TO_ASSIGN.name());
+            log.error("ERROR TECH CONDITION EPO [ASSIGNING]: id = [{}], error = [{}]", entity.getId(), ErrorCode.NO_USERS_TO_ASSIGN.name());
             throw new BadRequestException(ErrorCode.NO_USERS_TO_ASSIGN.name());
         }
 
@@ -452,7 +448,7 @@ public class TechConditionServiceImpl implements TechConditionService {
         entity.setRelatedUsers(new ArrayList<>(relatedUsers));
         entity.setHasActiveExecutions(true);
 
-        log.info("TECH CONDITION [ASSIGNED]: id = [{}], registration number = [{}], type = [{}], executors = [{}], divisions = [{}]",
+        log.info("TECH CONDITION EPO [ASSIGNED]: id = [{}], registration number = [{}], type = [{}], executors = [{}], divisions = [{}]",
                 entity.getId(), entity.getStatementRegistrationNumber(), dto.getEvent(), dto.getExecutors(), dto.getDivisions());
         entity = baseSave(entity);
 
@@ -555,7 +551,7 @@ public class TechConditionServiceImpl implements TechConditionService {
         }
 
         if (assignees.isEmpty()) {
-            log.error("ERROR TECH CONDITION [RE-ASSIGNING]: id = [{}], error = [{}]", entity.getId(), ErrorCode.NO_USERS_TO_ASSIGN.name());
+            log.error("ERROR TECH CONDITION EPO [RE-ASSIGNING]: id = [{}], error = [{}]", entity.getId(), ErrorCode.NO_USERS_TO_ASSIGN.name());
             throw new BadRequestException(ErrorCode.NO_USERS_TO_ASSIGN.name());
         }
 
@@ -569,7 +565,7 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         changeState(entity, execution, dto.getEvent());
 
-        log.info("TECH CONDITION [RE-ASSIGNED]: id = [{}], registration number = [{}], type = [{}], executors = [{}], divisions = [{}]",
+        log.info("TECH CONDITION EPO [RE-ASSIGNED]: id = [{}], registration number = [{}], type = [{}], executors = [{}], divisions = [{}]",
                 entity.getId(), entity.getStatementRegistrationNumber(), dto.getEvent(), dto.getExecutors(), dto.getDivisions());
         entity = baseSave(entity);
 
@@ -610,7 +606,7 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         //todo send DP
 
-        log.info("TECH CONDITION [RETURNED TO CONSUMER]: id = [{}], executions ids = [{}]", entity.getId(), String.join(", ", executionsIds));
+        log.info("TECH CONDITION EPO [RETURNED TO CONSUMER]: id = [{}], executions ids = [{}]", entity.getId(), String.join(", ", executionsIds));
         entity = baseSave(entity);
 
         updateData(entity, Event.RETURN_TO_CONSUMER);
@@ -636,7 +632,7 @@ public class TechConditionServiceImpl implements TechConditionService {
 
         changeState(entity, null, Event.REFUSE);
 
-        log.info("TECH CONDITION [REFUSED BY CONSUMER]: id = [{}], executions ids = [{}]", entity.getId(), String.join(", ", executionsIds));
+        log.info("TECH CONDITION EPO [REFUSED BY CONSUMER]: id = [{}], executions ids = [{}]", entity.getId(), String.join(", ", executionsIds));
         entity = baseSave(entity);
 
         updateData(entity, Event.REFUSE);
@@ -661,10 +657,10 @@ public class TechConditionServiceImpl implements TechConditionService {
     }
 
     private void updateData(TechConditionEntity entity, Event event) {
-        var dto = (TechConditionStatementDto) registryApiService.getByStatementId(entity.getStatementId());
-        dto = techConditionMapper.toStatementDto(dto, entity);
+        var dto = (TechConditionEpoStatementDto) registryApiService.getByStatementId(entity.getStatementId());
+        dto = techConditionEpoMapper.toStatementDto(dto, entity);
         dto.setEvent(event);
-        log.info("TECH CONDITION [UPDATE REGISTRY DATA]: event = [{}], dto = [{}],", event, dto);
+        log.info("TECH CONDITION EPO [UPDATE REGISTRY DATA]: event = [{}], dto = [{}],", event, dto);
         registryApiService.updateData(dto.getId(), dto);
     }
 
@@ -699,123 +695,22 @@ public class TechConditionServiceImpl implements TechConditionService {
     }
 
     private void checkState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
-        log.info("TECH CONDITION [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+        log.info("TECH CONDITION EPO [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            techConditionStatemachine.checkState(entity, execution, entity.getStatusCode(), event);
+            techConditionEpoStatemachine.checkState(entity, execution, entity.getStatusCode(), event);
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
-            log.error("TECH CONDITION [CHECK-STATE]: error message = {}", e.getMessage());
+            log.error("TECH CONDITION EPO [CHECK-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
         }
     }
 
     private void changeState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
-        log.info("TECH CONDITION [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+        log.info("TECH CONDITION EPO [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            techConditionStatemachine.changeState(entity, execution, entity.getStatusCode(), event);
+            techConditionEpoStatemachine.changeState(entity, execution, entity.getStatusCode(), event);
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
-            log.error("TECH CONDITION [CHANGE-STATE]: error message = {}", e.getMessage());
+            log.error("TECH CONDITION EPO [CHANGE-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
         }
-    }
-
-    @Override
-    public TechConditionStatementDto exampleConsume(TechConditionStatementDto dto) {
-        switch (dto.getEvent()) {
-            case CREATE:
-                return exampleCreate(dto);
-            case UPDATE:
-                update(dto);
-                break;
-            case DELETE:
-                delete(dto);
-                break;
-            case ADD_CONSUMER_SIGN:
-                return exampleAddConsumerSign(dto);
-            case DELETE_CONSUMER_SIGN:
-                deleteConsumerSign(dto);
-                break;
-            case REGISTER:
-                return exampleRegister(dto);
-            default:
-                log.error("Unknown event type [{}]", dto.getEvent());
-                break;
-        }
-        return null;
-    }
-
-    private TechConditionStatementDto exampleCreate(TechConditionStatementDto dto) {
-        TechConditionEntity entity = techConditionMapper.toEntity(dto);
-
-        entity = baseSave(entity);
-
-        abdAddressService.saveList(null, abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
-        intersectionService.saveList(null, intersectionMapper.toEntityList(dto.getIntersections()), entity);
-        subConsumerService.saveList(null, subConsumerMapper.toEntityList(dto.getSubConsumers()), entity);
-        maximumLoadService.saveList(null, maximumLoadMapper.toEntityList(dto.getMaximumLoads()), entity);
-        plannedEquipmentService.saveList(null, plannedEquipmentMapper.toEntityList(dto.getPlannedEquipments()), entity);
-        contractualCapacityOfTransformerService.saveList(null, contractualCapacityOfTransformerMapper.toEntityList(dto.getContractualCapacityOfTransformers()), entity);
-        reliabilityCategoryService.saveList(null, reliabilityCategoryMapper.toEntityList(dto.getReliabilityCategories()), entity);
-
-        changeState(entity, null, dto.getEvent());
-
-        log.info("TECH CONDITION [CREATED]: id = [{}]", entity.getId());
-        return techConditionMapper.toStatementDto(entity);
-    }
-
-    private TechConditionStatementDto exampleAddConsumerSign(TechConditionStatementDto dto) {
-        TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
-
-        checkState(entity, null, dto.getEvent());
-
-        abdAddressService.saveList(dbEntity.getObjectAbdAddresses(), abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
-        intersectionService.saveList(dbEntity.getIntersections(), intersectionMapper.toEntityList(dto.getIntersections()), entity);
-        subConsumerService.saveList(dbEntity.getSubConsumers(), subConsumerMapper.toEntityList(dto.getSubConsumers()), entity);
-        maximumLoadService.saveList(dbEntity.getMaximumLoads(), maximumLoadMapper.toEntityList(dto.getMaximumLoads()), entity);
-        plannedEquipmentService.saveList(dbEntity.getPlannedEquipments(), plannedEquipmentMapper.toEntityList(dto.getPlannedEquipments()), entity);
-        contractualCapacityOfTransformerService.saveList(dbEntity.getContractualCapacityOfTransformers(), contractualCapacityOfTransformerMapper.toEntityList(dto.getContractualCapacityOfTransformers()), entity);
-        reliabilityCategoryService.saveList(dbEntity.getReliabilityCategories(), reliabilityCategoryMapper.toEntityList(dto.getReliabilityCategories()), entity);
-
-        changeState(entity, null, dto.getEvent());
-
-        log.info("TECH CONDITION [ADDED CONSUMER SIGN]: id = [{}]", entity.getId());
-        baseSave(entity);
-
-        return techConditionMapper.toStatementDto(entity);
-    }
-
-    private TechConditionStatementDto exampleRegister(TechConditionStatementDto dto) {
-        TechConditionEntity dbEntity = findByStatementId(dto.getId());
-        TechConditionEntity entity = techConditionMapper.toEntity(dbEntity, dto);
-
-        checkState(entity, null, dto.getEvent());
-
-        abdAddressService.saveList(dbEntity.getObjectAbdAddresses(), abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
-        intersectionService.saveList(dbEntity.getIntersections(), intersectionMapper.toEntityList(dto.getIntersections()), entity);
-        subConsumerService.saveList(dbEntity.getSubConsumers(), subConsumerMapper.toEntityList(dto.getSubConsumers()), entity);
-        maximumLoadService.saveList(dbEntity.getMaximumLoads(), maximumLoadMapper.toEntityList(dto.getMaximumLoads()), entity);
-        plannedEquipmentService.saveList(dbEntity.getPlannedEquipments(), plannedEquipmentMapper.toEntityList(dto.getPlannedEquipments()), entity);
-        contractualCapacityOfTransformerService.saveList(dbEntity.getContractualCapacityOfTransformers(), contractualCapacityOfTransformerMapper.toEntityList(dto.getContractualCapacityOfTransformers()), entity);
-        reliabilityCategoryService.saveList(dbEntity.getReliabilityCategories(), reliabilityCategoryMapper.toEntityList(dto.getReliabilityCategories()), entity);
-
-        entity.setApplicationDatetime(OffsetDateTime.now());
-        entity.setDeadlineDatetime(calendarEventApiService.calculateDeadline(entity.getProviderId(), PROCESSING_DAYS)
-                .atTime(23, 59, 59));
-        entity.setOffHours(isFalse(calendarEventApiService.isProviderWorking(entity.getProviderId())));
-
-        changeState(entity, null, dto.getEvent());
-
-        entity = baseSave(entity);
-
-        log.info("TECH CONDITION [REGISTERED]: id = [{}]", entity.getId());
-        updateData(entity, dto.getEvent());
-
-        kzharyqTechConditionService.sendRegisteredRequest(entity);
-
-//        todo  send DP
-
-        autoAssign(entity, dto.getCurrentUserId());
-
-        return techConditionMapper.toStatementDto(entity);
     }
 }

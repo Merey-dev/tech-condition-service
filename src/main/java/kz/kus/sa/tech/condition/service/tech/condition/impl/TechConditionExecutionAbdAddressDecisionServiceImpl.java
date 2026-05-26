@@ -43,9 +43,7 @@ import kz.kus.sa.tech.condition.service.notification.NotificationService;
 import kz.kus.sa.tech.condition.service.report.TechConditionReportService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionExecutionAbdAddressDecisionService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionProjectService;
-import kz.kus.sa.tech.condition.statemachine.TechConditionDecisionStatemachine;
-import kz.kus.sa.tech.condition.statemachine.TechConditionExecutionStatemachine;
-import kz.kus.sa.tech.condition.statemachine.TechConditionStatemachine;
+import kz.kus.sa.tech.condition.statemachine.*;
 import kz.kus.sa.tech.condition.statemachine.exception.GuardException;
 import kz.kus.sa.tech.condition.statemachine.exception.UnknownEventException;
 import kz.kus.sa.tech.condition.statemachine.exception.UnknownStateException;
@@ -75,27 +73,29 @@ import static org.hibernate.internal.util.collections.CollectionHelper.isEmpty;
 @RequiredArgsConstructor
 public class TechConditionExecutionAbdAddressDecisionServiceImpl implements TechConditionExecutionAbdAddressDecisionService {
 
-    private final TechConditionExecutionAbdAddressDecisionRepository abdAddressDecisionRepository;
-    private final TechConditionExecutionRepository executionRepository;
-    private final TechConditionRepository techConditionRepository;
-    private final TechConditionProjectService techConditionProjectService;
-    private final ProviderApiService providerApiService;
-    private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
-    private final CurrentUserApiService currentUserApiService;
-    private final ExternalUserMapper externalUserMapper;
-    private final AbdAddressRepository abdAddressRepository;
-    private final TechConditionExecutionStatemachine executionStatemachine;
-    private final TechConditionStatemachine techConditionStatemachine;
-    private final KzharyqTechConditionService kzharyqTechConditionService;
-    private final RegistrySignApiService registrySignApiService;
-    private final TechConditionProjectMapper techConditionProjectMapper;
-    private final ReportTechConditionApiService reportTechConditionApiService;
-    private final TechConditionReportService techConditionReportService;
-    private final ConsumerApiService consumerApiService;
-    private final NotificationService notificationService;
     private final UserApiService userApiService;
+    private final ConsumerApiService consumerApiService;
+    private final ProviderApiService providerApiService;
+    private final ExternalUserMapper externalUserMapper;
+    private final NotificationService notificationService;
+    private final AbdAddressRepository abdAddressRepository;
+    private final CurrentUserApiService currentUserApiService;
+    private final RegistrySignApiService registrySignApiService;
+    private final TechConditionRepository techConditionRepository;
     private final ExternalSubdivisionMapper externalSubdivisionMapper;
+    private final TechConditionStatemachine techConditionStatemachine;
+    private final TechConditionExecutionRepository executionRepository;
+    private final TechConditionProjectMapper techConditionProjectMapper;
+    private final TechConditionReportService techConditionReportService;
     private final TechConditionDecisionStatemachine decisionStatemachine;
+    private final TechConditionProjectService techConditionProjectService;
+    private final KzharyqTechConditionService kzharyqTechConditionService;
+    private final TechConditionExecutionStatemachine executionStatemachine;
+    private final TechConditionEpoStatemachine techConditionEpoStatemachine;
+    private final ReportTechConditionApiService reportTechConditionApiService;
+    private final TechConditionEpoExecutionStatemachine epoExecutionStatemachine;
+    private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
+    private final TechConditionExecutionAbdAddressDecisionRepository abdAddressDecisionRepository;
 
     @Override
     public void assign(UUID executionId, AssignDto dto) {
@@ -1136,9 +1136,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     }
 
     private void checkState(TechConditionEntity entity, Event event) {
-        log.info("TECH CONDITION [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            techConditionStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionEpoStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION [CHECK-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
@@ -1146,9 +1151,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     }
 
     private void changeState(TechConditionEntity entity, Event event) {
-        log.info("TECH CONDITION [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
         try {
-            techConditionStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionEpoStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
+                techConditionStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION [CHANGE-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
@@ -1156,9 +1166,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     }
 
     private void executionCheckState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
-        log.info("TECH CONDITION EXECUTION [CHECK-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
         try {
-            executionStatemachine.checkState(entity, execution, execution.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO EXECUTION [CHECK-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                epoExecutionStatemachine.checkState(entity, execution, execution.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION EXECUTION [CHECK-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                executionStatemachine.checkState(entity, execution, execution.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION EXECUTION [CHECK-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());
@@ -1166,9 +1181,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     }
 
     private void executionChangeState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
-        log.info("TECH CONDITION EXECUTION [CHANGE-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
         try {
-            executionStatemachine.changeState(entity, execution, execution.getStatusCode(), event);
+            if (entity.getIsEpo()) {
+                log.info("TECH CONDITION EPO EXECUTION [CHANGE-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                epoExecutionStatemachine.changeState(entity, execution, execution.getStatusCode(), event);
+            } else {
+                log.info("TECH CONDITION EXECUTION [CHANGE-STATE]: status = [{}], event = [{}]", execution.getStatusCode(), event);
+                executionStatemachine.changeState(entity, execution, execution.getStatusCode(), event);
+            }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION EXECUTION [CHANGE-STATE]: error message = {}", e.getMessage());
             throw new BadRequestException(e.getMessage());

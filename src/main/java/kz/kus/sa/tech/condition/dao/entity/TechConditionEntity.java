@@ -43,6 +43,11 @@ public class TechConditionEntity extends AbstractAuditingEntity {
     private OffsetDateTime statementRegistrationDatetime;
 
 
+    /** Согласование Технических условий по сетям ЭПО (по субпотребителям) */
+    @Column(name = "is_epo", nullable = false)
+    private Boolean isEpo = false;
+
+
     /** № Технического условия */
     @Column(name = "tech_condition_number")
     private String techConditionNumber;

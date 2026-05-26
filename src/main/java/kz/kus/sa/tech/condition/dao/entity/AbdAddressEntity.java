@@ -22,41 +22,41 @@ public class AbdAddressEntity extends AbstractAuditingEntity {
     /** Собственник */
     @Column(name = "owner")
     private Boolean owner;
-    
+
     /** Код типа объекта (справочник) */
     @Column(name = "object_type_code")
     private String objectTypeCode;
-    
+
     /** Кадастровый номер */
     @Column(name = "address_cadastral_number")
     private String cadastralNumber;
-    
+
     /** Наименование объекта */
     @Column(name = "address_end_use_kk")
     private String endUseKk;
     @Column(name = "address_end_use_ru")
     private String endUseRu;
-    
+
     /** Правоустанавливающие документы на объект */
     @Column(name = "address_document_kk")
     private String documentKk;
     @Column(name = "address_document_ru")
     private String documentRu;
-    
+
     /** Этажность */
     @Column(name = "address_storeys")
     private String storeys;
-    
+
     /** Площадь */
     @Column(name = "address_total_area")
     private String totalArea;
-    
+
     /** Адрес */
     @Column(name = "address_location_kk", columnDefinition = "text")
     private String locationKk;
     @Column(name = "address_location_ru", columnDefinition = "text")
     private String locationRu;
-    
+
     /** Код РКА из АР сервиса */
     @Column(name = "address_ar_rca_code")
     private String arRcaCode;
@@ -136,6 +136,9 @@ public class AbdAddressEntity extends AbstractAuditingEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "act_of_delineation_renewals_id", referencedColumnName = "id", table = "abd_address", foreignKey = @ForeignKey(name = "fk_abd_address_act_of_delineation_renewals"))
     private ActOfDelineationRenewalEntity actOfDelineationRenewal;
+
+    @OneToMany(mappedBy = "objectAbdAddress", fetch = FetchType.LAZY)
+    private List<ActOfDelineationRenewalAbdAddressDecisionEntity> renewalDecisions;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "act_of_delineations_id", referencedColumnName = "id", table = "abd_address", foreignKey = @ForeignKey(name = "fk_abd_address_act_of_delineations"))
