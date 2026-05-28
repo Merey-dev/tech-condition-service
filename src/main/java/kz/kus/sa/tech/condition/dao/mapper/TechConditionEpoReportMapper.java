@@ -48,7 +48,6 @@ public abstract class TechConditionEpoReportMapper {
     @Mapping(target = "requiredPower", source = "decision.project.requiredPower")
     @Mapping(target = "registrationNumber", source = "decision.project.registrationNumber")
     @Mapping(target = "createdDatetime", expression = "java(kz.kus.sa.tech.condition.util.CommonUtils.formattedDate(decision.getProject().getCreatedDatetime()))")
-    @Mapping(target = "applicationDatetime", expression = "java(kz.kus.sa.tech.condition.util.CommonUtils.formattedDate(entity.getTechCondition().getApplicationDatetime()))")
     @Mapping(target = "connectionPointsRu", source = "decision.project.connectionPointsRu")
     @Mapping(target = "connectionPointsKk", source = "decision.project.connectionPointsKk")
     @Mapping(target = "connectionPointCode", source = "decision.project.connectionPointCode")
