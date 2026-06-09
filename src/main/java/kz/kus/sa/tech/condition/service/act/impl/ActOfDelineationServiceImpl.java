@@ -68,7 +68,7 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
 
         this.setRegistrationNumber(entity, dto.getProviderId());
 
-        var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
+        var renewal = this.findRenewalByStatementId(dto.getStatementId());
         entity.setActOfDelineationRenewal(renewal);
 
         ActOfDelineationRenewalAbdAddressDecisionEntity decision = resolveDecisionForCreation(dto, renewal.getId());
@@ -105,7 +105,7 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         var entity = this.findById(id);
         entity = actOfDelineationMapper.toEntity(entity, dto);
 
-        var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
+        var renewal = this.findRenewalByStatementId(dto.getStatementId());
         entity.setActOfDelineationRenewal(renewal);
 
         if (entity.getElectrifiedInstallations() != null) {
@@ -177,8 +177,8 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 
-    private ActOfDelineationRenewalEntity findRenewalById(UUID renewalId) {
-        return actOfDelineationRenewalRepository.findByIdAndDeletedDatetimeIsNull(renewalId)
+    private ActOfDelineationRenewalEntity findRenewalByStatementId(UUID statementId) {
+        return actOfDelineationRenewalRepository.findByStatementIdAndDeletedDatetimeIsNull(statementId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 

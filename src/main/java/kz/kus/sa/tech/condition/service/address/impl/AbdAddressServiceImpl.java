@@ -164,6 +164,7 @@ public class AbdAddressServiceImpl implements AbdAddressService {
     }
 
     private void copyFields(AbdAddressEntity source, AbdAddressEntity target) {
+        target.setId(source.getId());
         target.setOwner(source.getOwner());
         target.setObjectTypeCode(source.getObjectTypeCode());
         target.setCadastralNumber(source.getCadastralNumber());
