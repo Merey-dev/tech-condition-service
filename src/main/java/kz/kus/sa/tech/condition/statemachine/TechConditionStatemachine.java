@@ -38,7 +38,7 @@ public class TechConditionStatemachine extends StateConfig<String, Event, TechCo
                 .and()
                 .event(Event.DELETE)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isNotDeleted(entity))
+//                .guard((entity, execution) -> isNotDeleted(entity))
 
                 .and()
                 .event(Event.ADD_CONSUMER_SIGN)
@@ -418,7 +418,9 @@ public class TechConditionStatemachine extends StateConfig<String, Event, TechCo
         entity.setLastModifiedDatetime(now);
         if (Event.DELETE.equals(event)) {
             entity.setDeletedDatetime(now);
-            execution.setDeletedDatetime(now);
+            if (execution != null) {
+                execution.setDeletedDatetime(now);
+            }
         }
 
         historyService.save(entity, execution, event);

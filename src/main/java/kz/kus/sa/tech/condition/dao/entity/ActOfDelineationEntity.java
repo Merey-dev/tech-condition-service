@@ -1,9 +1,7 @@
 package kz.kus.sa.tech.condition.dao.entity;
 
 import kz.kus.sa.tech.condition.util.Constants;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.OffsetDateTime;
@@ -13,9 +11,9 @@ import java.util.UUID;
 /**
  * Акт разграничение балансовой принадлежности (по конкретному адресу)
  */
-@Data
+@Getter
+@Setter
 @Entity
-@EqualsAndHashCode(callSuper = true)
 @Table(name = "act_of_delineations", schema = Constants.SCHEMA_NAME)
 public class ActOfDelineationEntity extends AbstractAuditingEntity {
 
@@ -71,9 +69,7 @@ public class ActOfDelineationEntity extends AbstractAuditingEntity {
     private List<AbdAddressEntity> objectAbdAddresses;
 
     /** Электрифицированные установки */
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "act_of_delineations_id")
-    @ToString.Exclude
+    @OneToMany(mappedBy = "actOfDelineation", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ElectrifiedInstallationEntity> electrifiedInstallations;
 
 

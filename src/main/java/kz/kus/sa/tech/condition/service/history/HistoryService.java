@@ -13,7 +13,7 @@ public interface HistoryService {
 
     void save(TechConditionEntity techCondition, TechConditionExecutionEntity execution, Event event);
 
-    void save(ActOfDelineationRenewalEntity actOfDelineationRenewal, ActOfDelineationRenewalExecutionEntity execution, Event event);
+    void save(ActOfDelineationRenewalEntity actOfDelineationRenewal, Event event);
 
     Page<HistoryDto> getByStatementId(UUID statementId, Pageable pageable);
 

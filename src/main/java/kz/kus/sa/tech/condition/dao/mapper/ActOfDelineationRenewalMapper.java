@@ -28,25 +28,27 @@ public abstract class ActOfDelineationRenewalMapper {
     @Mapping(target = "statementId", source = "dto.id")
     @Mapping(target = "statementRegistrationNumber", source = "dto.registrationNumber")
     @Mapping(target = "statementRegistrationDatetime", source = "dto.registrationDatetime")
+    @Mapping(target = "objectAbdAddresses", ignore = true)
     public abstract ActOfDelineationRenewalEntity toEntity(ActOfDelineationRenewalDto dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "statementId", source = "dto.id")
     @Mapping(target = "statementRegistrationNumber", source = "dto.registrationNumber")
     @Mapping(target = "statementRegistrationDatetime", source = "dto.registrationDatetime")
+    @Mapping(target = "objectAbdAddresses", ignore = true)
     public abstract ActOfDelineationRenewalEntity toEntity(@MappingTarget ActOfDelineationRenewalEntity entity, ActOfDelineationRenewalDto dto);
 
     @Mapping(target = "id", source = "entity.statementId")
     @Mapping(target = "registrationNumber", source = "entity.statementRegistrationNumber")
     @Mapping(target = "registrationDatetime", source = "entity.statementRegistrationDatetime")
-    @Mapping(target = "statementType", constant = "ACT_OF_DELINEATION_RENEWAL")
+    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.ACT_OF_DELINEATION_RENEWAL)")
     @Mapping(target = "objectAbdAddresses", source = "id", qualifiedByName = "objectAbdAddresses")
     public abstract ActOfDelineationRenewalDto toStatementDto(ActOfDelineationRenewalEntity entity);
 
     @Mapping(target = "id", source = "entity.statementId")
     @Mapping(target = "registrationNumber", source = "entity.statementRegistrationNumber")
     @Mapping(target = "registrationDatetime", source = "entity.statementRegistrationDatetime")
-    @Mapping(target = "statementType", constant = "ACT_OF_DELINEATION_RENEWAL")
+    @Mapping(target = "statementType", expression = "java(kz.kus.sa.registry.enums.StatementType.ACT_OF_DELINEATION_RENEWAL)")
     @Mapping(target = "objectAbdAddresses", source = "id", qualifiedByName = "objectAbdAddresses")
     public abstract ActOfDelineationRenewalDto toStatementDto(@MappingTarget ActOfDelineationRenewalDto dto, ActOfDelineationRenewalEntity entity);
 

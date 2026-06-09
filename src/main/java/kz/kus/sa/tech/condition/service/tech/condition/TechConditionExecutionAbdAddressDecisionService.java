@@ -1,6 +1,7 @@
 package kz.kus.sa.tech.condition.service.tech.condition;
 
 import kz.kus.sa.registry.dto.common.AssignDto;
+import kz.kus.sa.registry.dto.common.ExternalSubdivisionDto;
 import kz.kus.sa.registry.dto.common.SignCreateDto;
 import kz.kus.sa.tech.condition.dao.entity.TechConditionExecutionAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dto.TechConditionExecuteDto;
@@ -15,6 +16,8 @@ public interface TechConditionExecutionAbdAddressDecisionService {
     void assign(UUID executionId, AssignDto dto);
 
     List<TechConditionExecutionAbdAddressDecisionEntity> findAllByExecutionId(UUID executionId);
+
+    void createDecisionsForExecution(UUID executionId, List<UUID> assignees, ExternalSubdivisionDto subdivision);
 
     void executeApplication(UUID executionId, TechConditionExecuteDto dto);
 

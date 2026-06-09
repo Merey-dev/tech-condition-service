@@ -83,7 +83,7 @@ public class ActOfDelineationRenewalEntity extends AbstractAuditingEntity {
 
 
     /** Адреса объектов из АБД */
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "act_of_delineation_renewals_id")
     @ToString.Exclude
     private List<AbdAddressEntity> objectAbdAddresses;

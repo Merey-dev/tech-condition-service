@@ -12,6 +12,7 @@ import kz.kus.sa.registry.dto.common.AssignDto;
 import kz.kus.sa.registry.dto.renewal.ActOfDelineationRenewalDto;
 import kz.kus.sa.registry.enums.Event;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalEntity;
+import kz.kus.sa.tech.condition.dao.mapper.AbdAddressMapper;
 import kz.kus.sa.tech.condition.dao.mapper.ActOfDelineationRenewalMapper;
 import kz.kus.sa.tech.condition.dao.mapper.ExternalSubdivisionMapper;
 import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalRepository;
@@ -20,6 +21,7 @@ import kz.kus.sa.tech.condition.exception.ErrorCode;
 import kz.kus.sa.tech.condition.exception.NotFoundException;
 import kz.kus.sa.tech.condition.service.act.ActOfDelineationRenewalAbdAddressDecisionService;
 import kz.kus.sa.tech.condition.service.act.ActOfDelineationRenewalService;
+import kz.kus.sa.tech.condition.service.address.AbdAddressService;
 import kz.kus.sa.tech.condition.statemachine.ActOfDelineationRenewalStatemachine;
 import kz.kus.sa.tech.condition.statemachine.exception.GuardException;
 import kz.kus.sa.tech.condition.statemachine.exception.UnknownEventException;
@@ -44,15 +46,17 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenewalService {
 
     private final UserApiService userApiService;
+    private final AbdAddressMapper abdAddressMapper;
+    private final AbdAddressService abdAddressService;
     private final ProviderApiService providerApiService;
     private final RegistryApiService registryApiService;
     private final CurrentUserApiService currentUserApiService;
     private final CalendarEventApiService calendarEventApiService;
     private final ExternalSubdivisionMapper externalSubdivisionMapper;
     private final ActOfDelineationRenewalMapper actOfDelineationRenewalMapper;
+    private final ActOfDelineationRenewalAbdAddressDecisionService decisionService;
     private final ActOfDelineationRenewalRepository actOfDelineationRenewalRepository;
     private final ActOfDelineationRenewalStatemachine actOfDelineationRenewalStatemachine;
-    private final ActOfDelineationRenewalAbdAddressDecisionService decisionService;
 
     @Override
     public ActOfDelineationRenewalDto getByStatementId(UUID statementId) {
@@ -91,15 +95,21 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
         var entity = actOfDelineationRenewalMapper.toEntity(dto);
 
         entity = baseSave(entity);
+
+        abdAddressService.saveList(null, abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
+
         changeState(entity, dto.getEvent());
         log.info("AOD RENEWAL [CREATED]: id = [{}]", entity.getId());
     }
 
     private void update(ActOfDelineationRenewalDto dto) {
-        var entity = findByStatementId(dto.getId());
-        entity = actOfDelineationRenewalMapper.toEntity(entity, dto);
+        var dbEntity = findByStatementId(dto.getId());
+        var entity = actOfDelineationRenewalMapper.toEntity(dbEntity, dto);
 
         checkState(entity, dto.getEvent());
+
+        abdAddressService.saveList(dbEntity.getObjectAbdAddresses(), abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
+
         changeState(entity, dto.getEvent());
 
         log.info("AOD RENEWAL [UPDATED]: id = [{}]", entity.getId());
@@ -215,6 +225,8 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
             throw new BadRequestException(ErrorCode.NO_USERS_TO_ASSIGN.name());
         }
 
+        changeState(entity, dto.getEvent());
+
         Set<UUID> related = new HashSet<>(
                 Optional.ofNullable(entity.getRelatedUsers()).orElse(new ArrayList<>()));
         related.addAll(assignees);
@@ -224,7 +236,6 @@ public class ActOfDelineationRenewalServiceImpl implements ActOfDelineationRenew
         entity.setAssignedBy(currentUser.getId());
         entity.setCurrentUserId(currentUser.getId());
 
-        changeState(entity, dto.getEvent());
         entity = baseSave(entity);
         updateData(entity, dto.getEvent());
 

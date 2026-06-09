@@ -51,7 +51,7 @@ public class ActOfDelineationReportServiceImpl implements ActOfDelineationReport
 
     @Override
     public ActOfDelineationRenewalApplicationReportDto applicationReportData(UUID id) {
-        var renewal = findById(id);
+        var renewal = findByStatementId(id);
 
         var dto = actOfDelineationReportMapper.toActOfDelineationRenewalApplicationReportDto(renewal);
 
@@ -65,13 +65,13 @@ public class ActOfDelineationReportServiceImpl implements ActOfDelineationReport
         commonReportService.setBlankHeaderInfo(renewal.getProviderId(), params);
         dto.setParams(params);
 
-        log.info("REPORT [APPLICATION BLANK]: id = [{}]", id);
+        log.info("REPORT [APPLICATION BLANK]: statementId = [{}]", id);
         return dto;
     }
 
     @Override
     public ActOfDelineationRenewalReportDto actReportData(UUID id) {
-        var renewal = findById(id);
+        var renewal = findByStatementId(id);
         var act = actOfDelineationService.findByRenewalId(id);
 
         var dto = actOfDelineationReportMapper.toActOfDelineationRenewalReportDto(act);
@@ -84,12 +84,12 @@ public class ActOfDelineationReportServiceImpl implements ActOfDelineationReport
         dto.setSigns(getSignsByIdAndDocType(renewal.getStatementId(), Collections.singletonList(SignedDocType.ACT_OF_DELINEATION)));
         dto.setParams(params);
 
-        log.info("REPORT [ACT BLANK]: id = [{}]", id);
+        log.info("REPORT [ACT BLANK]: statementId = [{}]", id);
         return dto;
     }
 
-    private ActOfDelineationRenewalEntity findById(UUID id) {
-        return actOfDelineationRenewalRepository.findById(id)
+    private ActOfDelineationRenewalEntity findByStatementId(UUID id) {
+        return actOfDelineationRenewalRepository.findByStatementIdAndDeletedDatetimeIsNull(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 

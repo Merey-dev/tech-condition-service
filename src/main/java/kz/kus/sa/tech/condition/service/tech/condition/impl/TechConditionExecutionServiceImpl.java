@@ -182,7 +182,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
                         techConditionEntity.getId(), entity.getId(), dto.getUserId());
 
                 notificationService.send(userDto.getEmail(), String.format(
-                        NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME,
+                        NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME_RU,
                         stringOrEmpty(techConditionEntity.getStatementRegistrationNumber()),
                         formattedDate(techConditionEntity.getApplicationDatetime())));
             }
@@ -370,7 +370,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
 
         if (isParallel) {
             notificationService.send(mergeEmails(notificationRecipients), String.format(
-                    NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME,
+                    NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME_RU,
                     stringOrEmpty(techConditionEntity.getStatementRegistrationNumber()),
                     formattedDate(techConditionEntity.getStatementRegistrationDatetime())));
         }
@@ -388,9 +388,9 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
         return techConditionExecutionRepository.save(entity);
     }
 
-    private TechConditionEntity baseSave(TechConditionEntity entity) {
+    private void baseSave(TechConditionEntity entity) {
         entity.setLastModifiedDatetime(OffsetDateTime.now());
-        return techConditionRepository.save(entity);
+        techConditionRepository.save(entity);
     }
 
     private TechConditionExecutionEntity findById(UUID id) {
@@ -404,7 +404,6 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
     }
 
     /** EVENT */
-    @Override
     public void takeToExecution(UUID id, AssignDto dto) {
         TechConditionExecutionEntity entity = findById(id);
         TechConditionEntity techConditionEntity = entity.getTechCondition();
@@ -421,15 +420,15 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
         entity.setAssignedExecutor(null);
         entity.setAssignedSubdivision(null);
 
-        boolean statusChanged = false;
-        if (Event.TCE_TAKE_TO_EXECUTION == dto.getEvent()) {
-            statusChanged = !Objects.equals(techConditionEntity.getStatusCode(), Status.ON_EXECUTION.getCode());
-            if (Objects.equals(techConditionEntity.getStatusCode(), Status.ASSIGNED.getCode())) {
-                techConditionEntity.setStatusCode(Status.ON_EXECUTION.getCode());
-            }
-        } else {
+        if (Event.TCE_TAKE_TO_EXECUTION != dto.getEvent()) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
         }
+
+        boolean statusChanged = !Objects.equals(techConditionEntity.getStatusCode(), Status.ON_EXECUTION.getCode());
+        if (Objects.equals(techConditionEntity.getStatusCode(), Status.ASSIGNED.getCode())) {
+            techConditionEntity.setStatusCode(Status.ON_EXECUTION.getCode());
+        }
+
         entity.setOwner(externalUserMapper.fromCurrentUserResponse(currentUser));
 
         executionChangeState(techConditionEntity, entity, dto.getEvent());
@@ -440,6 +439,37 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
         }
 
         baseSave(techConditionEntity);
+        baseSave(entity);
+
+        List<TechConditionExecutionAbdAddressDecisionEntity> decisions =
+                abdAddressDecisionRepository.findAllByTechConditionExecutionId(entity.getId());
+
+        int promoted = 0;
+        for (TechConditionExecutionAbdAddressDecisionEntity decision : decisions) {
+            if (!AbdAddressDecisionStatus.ASSIGNED.getCode().equals(decision.getStatusCode())) {
+                continue;
+            }
+            if (decision.getAssignees() == null || !decision.getAssignees().contains(currentUser.getId())) {
+                continue;
+            }
+
+            decision.setExecutor(externalUserMapper.fromCurrentUserResponse(currentUser));
+            decision.setAssignees(List.of(currentUser.getId()));
+
+            Set<UUID> related = new HashSet<>(
+                    Optional.ofNullable(decision.getRelatedUsers()).orElse(new ArrayList<>()));
+            related.add(currentUser.getId());
+            decision.setRelatedUsers(new ArrayList<>(related));
+
+            decision.setStatusCode(AbdAddressDecisionStatus.ON_EXECUTION.getCode());
+            decision.setLastModifiedDatetime(OffsetDateTime.now());
+
+            abdAddressDecisionRepository.save(decision);
+            promoted++;
+        }
+
+        log.info("TECH CONDITION [EXECUTION TAKEN TO EXECUTION]: id=[{}], executionId=[{}], userId=[{}], promotedDecisions=[{}]",
+                techConditionEntity.getId(), entity.getId(), currentUser.getId(), promoted);
 
         // todo DP
 //        if (Objects.equals(techConditionEntity.getStatusCode(), Status.ON_EXECUTION.getCode()) && statusChanged) {
@@ -450,10 +480,6 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
 //                        techConditionEntity.getStatementId(), techConditionEntity.getStatementRegistrationNumber(), e);
 //            }
 //        }
-
-        log.info("TECH CONDITION [EXECUTION TAKEN TO EXECUTION]: id = [{}], execution id = [{}], executor = [{}]",
-                techConditionEntity.getId(), entity.getId(), currentUser.getId());
-        baseSave(entity);
     }
 
     @Override
@@ -557,7 +583,7 @@ public class TechConditionExecutionServiceImpl implements TechConditionExecution
         baseSave(entity);
 
         notificationService.send(mergeEmails(notificationRecipients), String.format(
-                NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME,
+                NEW_ASSIGN, IS_NAME, TC_SERVICE_NAME_RU,
                 stringOrEmpty(techConditionEntity.getStatementRegistrationNumber()),
                 formattedDate(techConditionEntity.getApplicationDatetime())));
     }

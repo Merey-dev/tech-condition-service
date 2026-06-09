@@ -13,6 +13,7 @@ import kz.kus.sa.auth.api.user.dto.UserFilterDto;
 import kz.kus.sa.consumer.api.ConsumerApiService;
 import kz.kus.sa.registry.api.RegistryApiService;
 import kz.kus.sa.registry.dto.common.AssignDto;
+import kz.kus.sa.registry.dto.common.ExternalSubdivisionDto;
 import kz.kus.sa.registry.dto.common.FileCreateDto;
 import kz.kus.sa.registry.dto.tc.epo.TechConditionEpoStatementDto;
 import kz.kus.sa.registry.dto.v1.StatementDto;
@@ -51,10 +52,8 @@ import java.util.stream.Collectors;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static kz.kus.sa.tech.condition.util.CommonUtils.*;
-import static kz.kus.sa.tech.condition.util.CommonUtils.stringOrEmpty;
 import static kz.kus.sa.tech.condition.util.Constants.PROCESSING_DAYS;
 import static kz.kus.sa.tech.condition.util.Messages.*;
-import static kz.kus.sa.tech.condition.util.Messages.APPLICATION_REGISTERED;
 import static org.apache.commons.lang3.BooleanUtils.isFalse;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
@@ -91,6 +90,7 @@ public class TechConditionEpoServiceImpl implements TechConditionEpoService {
     private final TechConditionPlannedEquipmentService plannedEquipmentService;
     private final TechConditionReliabilityCategoryMapper reliabilityCategoryMapper;
     private final TechConditionReliabilityCategoryService reliabilityCategoryService;
+    private final TechConditionExecutionAbdAddressDecisionService abdAddressDecisionService;
     private final TechConditionContractualCapacityOfTransformerMapper contractualCapacityOfTransformerMapper;
     private final TechConditionContractualCapacityOfTransformerService contractualCapacityOfTransformerService;
     
@@ -290,6 +290,11 @@ public class TechConditionEpoServiceImpl implements TechConditionEpoService {
         if (List.of(Event.ASSIGN_TO_DIVISION, Event.ASSIGN_TO_EXECUTOR).contains(dto.getEvent())) {
             execution = techConditionExecutionService.create(entity.getId(), dto, TechConditionExecutionType.APPLICATION, false, abdAddressMapper.toDtoList(entity.getObjectAbdAddresses()));
             execution.setAssignedBy(currentUser.getId());
+
+            ExternalSubdivisionDto subdivision = execution.getAssignedSubdivision() != null
+                    ? externalSubdivisionMapper.toDto(execution.getAssignedSubdivision())
+                    : null;
+            abdAddressDecisionService.createDecisionsForExecution(execution.getId(), new ArrayList<>(assignees), subdivision);
         }
 
         changeState(entity, execution, dto.getEvent());
@@ -666,7 +671,7 @@ public class TechConditionEpoServiceImpl implements TechConditionEpoService {
 
     private void notificationSend(TechConditionEntity entity, Set<String> notificationRecipients, CurrentUserResponse currentUser) {
         notificationService.send(mergeEmails(notificationRecipients), String.format(
-                NEW_APPLICATION, IS_NAME, TC_SERVICE_NAME,
+                NEW_APPLICATION, IS_NAME, TC_SERVICE_NAME_RU,
                 stringOrEmpty(entity.getStatementRegistrationNumber()),
                 formattedDate(entity.getApplicationDatetime())));
 
@@ -682,9 +687,13 @@ public class TechConditionEpoServiceImpl implements TechConditionEpoService {
             notificationService.send(consumer.getEmail(), String.format(
                     APPLICATION_REGISTERED,
                     stringOrEmpty(providerDto.getKk()),
+                    TC_EPO_SERVICE_NAME_KK,
                     stringOrEmpty(entity.getStatementRegistrationNumber()),
+                    LINK_DP,
                     stringOrEmpty(providerDto.getRu()),
                     stringOrEmpty(entity.getStatementRegistrationNumber()),
+                    TC_EPO_SERVICE_NAME_RU,
+                    LINK_DP,
                     stringOrEmpty(currentUser.getFullName()),
                     stringOrEmpty(currentUser.getPhone())));
         else

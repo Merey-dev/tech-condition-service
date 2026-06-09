@@ -5,7 +5,6 @@ import kz.kus.sa.auth.api.currentuser.dto.CurrentUserResponse;
 import kz.kus.sa.registry.enums.Event;
 import kz.kus.sa.registry.enums.Status;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalEntity;
-import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalExecutionEntity;
 import kz.kus.sa.tech.condition.service.history.HistoryService;
 import kz.kus.sa.tech.condition.statemachine.base.StateConfig;
 import lombok.AllArgsConstructor;
@@ -17,13 +16,13 @@ import java.time.OffsetDateTime;
 @Slf4j
 @Component
 @AllArgsConstructor
-public class ActOfDelineationRenewalStatemachine extends StateConfig<String, Event, ActOfDelineationRenewalEntity, ActOfDelineationRenewalExecutionEntity> {
+public class ActOfDelineationRenewalStatemachine extends StateConfig<String, Event, ActOfDelineationRenewalEntity, Object> {
 
     private final CurrentUserApiService currentUserApiService;
     private final HistoryService historyService;
 
     @SuppressWarnings("unchecked")
-    protected void configure(StateBuilder<String, Event, ActOfDelineationRenewalEntity, ActOfDelineationRenewalExecutionEntity> stateBuilder) {
+    protected void configure(StateBuilder<String, Event, ActOfDelineationRenewalEntity, Object> stateBuilder) {
 
         // Статус "Черновик"
         stateBuilder.state(Status.DRAFT.getCode())
@@ -38,7 +37,7 @@ public class ActOfDelineationRenewalStatemachine extends StateConfig<String, Eve
                 .and()
                 .event(Event.DELETE)
                 .action(this::saveHistory)
-                .guard((entity, execution) -> isNotDeleted(entity))
+//                .guard((entity, execution) -> isNotDeleted(entity))
 
                 .and()
                 .event(Event.ADD_CONSUMER_SIGN)
@@ -249,20 +248,19 @@ public class ActOfDelineationRenewalStatemachine extends StateConfig<String, Eve
                 .action(this::setState);
     }
 
-    private void setState(ActOfDelineationRenewalEntity entity, ActOfDelineationRenewalExecutionEntity execution, String state, Event event) {
+    private void setState(ActOfDelineationRenewalEntity entity, Object ignore, String state, Event event) {
         entity.setStatusCode(state);
-        saveHistory(entity, execution, state, event);
+        saveHistory(entity, ignore, state, event);
     }
 
-    private void saveHistory(ActOfDelineationRenewalEntity entity, ActOfDelineationRenewalExecutionEntity execution, String state, Event event) {
+    private void saveHistory(ActOfDelineationRenewalEntity entity, Object ignore, String state, Event event) {
         OffsetDateTime now = OffsetDateTime.now();
         entity.setLastModifiedDatetime(now);
         if (Event.DELETE.equals(event)) {
             entity.setDeletedDatetime(now);
-            execution.setDeletedDatetime(now);
         }
 
-        historyService.save(entity, execution, event);
+        historyService.save(entity, event);
     }
 
     private boolean isNotDeleted(ActOfDelineationRenewalEntity entity) {

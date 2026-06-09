@@ -62,7 +62,7 @@ public class HistoryServiceImpl implements HistoryService {
     }
 
     @Override
-    public void save(ActOfDelineationRenewalEntity actOfDelineationRenewal, ActOfDelineationRenewalExecutionEntity execution, Event event) {
+    public void save(ActOfDelineationRenewalEntity actOfDelineationRenewal, Event event) {
         HistoryEntity history = new HistoryEntity();
         OffsetDateTime now = OffsetDateTime.now();
 

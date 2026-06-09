@@ -15,6 +15,7 @@ import kz.kus.sa.consumer.api.ConsumerApiService;
 import kz.kus.sa.registry.api.RegistryGenerateNumberApiService;
 import kz.kus.sa.registry.api.RegistrySignApiService;
 import kz.kus.sa.registry.dto.common.AssignDto;
+import kz.kus.sa.registry.dto.common.ExternalSubdivisionDto;
 import kz.kus.sa.registry.dto.common.SignCreateDto;
 import kz.kus.sa.registry.enums.*;
 import kz.kus.sa.report.api.ReportTechConditionApiService;
@@ -30,7 +31,6 @@ import kz.kus.sa.tech.condition.dto.TechConditionExecuteDto;
 import kz.kus.sa.tech.condition.dto.execution.TechConditionExecutionAbdAddressDecisionDto;
 import kz.kus.sa.tech.condition.dto.project.TechConditionProjectCreateDto;
 import kz.kus.sa.tech.condition.dto.project.TechConditionProjectDto;
-import kz.kus.sa.tech.condition.dto.report.TechConditionDecisionReportDto;
 import kz.kus.sa.tech.condition.enums.AbdAddressDecisionStatus;
 import kz.kus.sa.tech.condition.enums.ExecutionStatus;
 import kz.kus.sa.tech.condition.enums.ProjectStatus;
@@ -40,6 +40,7 @@ import kz.kus.sa.tech.condition.exception.ErrorCode;
 import kz.kus.sa.tech.condition.exception.NotFoundException;
 import kz.kus.sa.tech.condition.service.intagration.KzharyqTechConditionService;
 import kz.kus.sa.tech.condition.service.notification.NotificationService;
+import kz.kus.sa.tech.condition.service.report.TechConditionEpoReportService;
 import kz.kus.sa.tech.condition.service.report.TechConditionReportService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionExecutionAbdAddressDecisionService;
 import kz.kus.sa.tech.condition.service.tech.condition.TechConditionProjectService;
@@ -63,8 +64,8 @@ import static kz.kus.sa.registry.enums.TechConditionExecutionDecisionType.REASON
 import static kz.kus.sa.registry.enums.TechConditionExecutionDecisionType.TECHNICAL_RECOMMENDATION;
 import static kz.kus.sa.tech.condition.util.CommonUtils.isNullOrEmpty;
 import static kz.kus.sa.tech.condition.util.CommonUtils.stringOrEmpty;
-import static kz.kus.sa.tech.condition.util.Messages.REASONED_REFUSAL_SIGNED;
-import static kz.kus.sa.tech.condition.util.Messages.TECH_RECOMMENDATION_SIGNED;
+import static kz.kus.sa.tech.condition.util.Messages.*;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.hibernate.internal.util.collections.CollectionHelper.isEmpty;
 
 @Slf4j
@@ -93,6 +94,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     private final TechConditionExecutionStatemachine executionStatemachine;
     private final TechConditionEpoStatemachine techConditionEpoStatemachine;
     private final ReportTechConditionApiService reportTechConditionApiService;
+    private final TechConditionEpoReportService techConditionEpoReportService;
     private final TechConditionEpoExecutionStatemachine epoExecutionStatemachine;
     private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
     private final TechConditionExecutionAbdAddressDecisionRepository abdAddressDecisionRepository;
@@ -117,17 +119,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                         .collect(Collectors.toList());
 
                 d.getObjectAbdAddresses().forEach(abdAddressDto -> {
-                    TechConditionExecutionAbdAddressDecisionEntity decision =
-                            abdAddressDecisionRepository
-                                    .findByTechConditionExecutionIdAndObjectAbdAddressId(
-                                            executionId, abdAddressDto.getId())
-                                    .orElseGet(() -> {
-                                        TechConditionExecutionAbdAddressDecisionEntity newDecision =
-                                                new TechConditionExecutionAbdAddressDecisionEntity();
-                                        newDecision.setTechConditionExecution(execution);
-                                        newDecision.setObjectAbdAddress(findAddressById(abdAddressDto.getId()));
-                                        return newDecision;
-                                    });
+                    TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
+                            .findByTechConditionExecutionIdAndObjectAbdAddressId(executionId, abdAddressDto.getId())
+                            .orElseGet(() -> {
+                                TechConditionExecutionAbdAddressDecisionEntity newDecision = new TechConditionExecutionAbdAddressDecisionEntity();
+                                newDecision.setTechConditionExecution(execution);
+                                newDecision.setObjectAbdAddress(findAddressById(abdAddressDto.getId()));
+                                return newDecision;
+                            });
 
                     decision.setAssignedSubdivision(externalSubdivisionMapper.toEntity(subdivisionDto));
                     decision.setAssignees(assignees);
@@ -145,17 +144,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                 SubdivisionDto subdivisionDto = providerApiService.getSubdivision(userDto.getSubdivisionId());
 
                 e.getObjectAbdAddresses().forEach(abdAddressDto -> {
-                    TechConditionExecutionAbdAddressDecisionEntity decision =
-                            abdAddressDecisionRepository
-                                    .findByTechConditionExecutionIdAndObjectAbdAddressId(
-                                            executionId, abdAddressDto.getId())
-                                    .orElseGet(() -> {
-                                        TechConditionExecutionAbdAddressDecisionEntity newDecision =
-                                                new TechConditionExecutionAbdAddressDecisionEntity();
-                                        newDecision.setTechConditionExecution(execution);
-                                        newDecision.setObjectAbdAddress(findAddressById(abdAddressDto.getId()));
-                                        return newDecision;
-                                    });
+                    TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
+                            .findByTechConditionExecutionIdAndObjectAbdAddressId(executionId, abdAddressDto.getId())
+                            .orElseGet(() -> {
+                                TechConditionExecutionAbdAddressDecisionEntity newDecision = new TechConditionExecutionAbdAddressDecisionEntity();
+                                newDecision.setTechConditionExecution(execution);
+                                newDecision.setObjectAbdAddress(findAddressById(abdAddressDto.getId()));
+                                return newDecision;
+                            });
 
                     decision.setAssignedExecutor(externalUserMapper.toEntity(userDto));
                     decision.setAssignedSubdivision(externalSubdivisionMapper.toEntity(subdivisionDto));
@@ -190,6 +186,40 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         return abdAddressDecisionRepository.findAllByTechConditionExecutionId(executionId);
     }
 
+    @Override
+    public void createDecisionsForExecution(UUID executionId, List<UUID> assignees, ExternalSubdivisionDto subdivision) {
+        TechConditionExecutionEntity execution = findExecutionById(executionId);
+        List<AbdAddressEntity> addresses = abdAddressRepository.findAllByTechConditionExecutionId(executionId);
+
+        if (isEmpty(addresses)) {
+            log.warn("DECISION [BULK CREATE]: executionId=[{}] has no addresses", executionId);
+            return;
+        }
+
+        addresses.forEach(address -> {
+            TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
+                    .findByTechConditionExecutionIdAndObjectAbdAddressId(executionId, address.getId())
+                    .orElseGet(() -> {
+                        TechConditionExecutionAbdAddressDecisionEntity d = new TechConditionExecutionAbdAddressDecisionEntity();
+                        d.setTechConditionExecution(execution);
+                        d.setObjectAbdAddress(address);
+                        d.setStatusCode(AbdAddressDecisionStatus.ASSIGNED.getCode());
+                        return d;
+                    });
+
+            if (nonNull(subdivision)) {
+                decision.setAssignedSubdivision(externalSubdivisionMapper.toEntity(subdivision));
+            }
+            decision.setAssignees(new ArrayList<>(assignees));
+            Set<UUID> related = new HashSet<>(Optional.ofNullable(decision.getRelatedUsers()).orElse(new ArrayList<>()));
+            related.addAll(assignees);
+            decision.setRelatedUsers(new ArrayList<>(related));
+            abdAddressDecisionRepository.save(decision);
+        });
+
+        log.info("DECISION [BULK CREATE]: executionId=[{}], count=[{}]", executionId, addresses.size());
+    }
+
     private TechConditionExecutionAbdAddressDecisionEntity findByExecutionIdAndAbdAddressId(UUID executionId, UUID abdAddressId) {
         return abdAddressDecisionRepository.findByTechConditionExecutionIdAndObjectAbdAddressId(executionId, abdAddressId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
@@ -208,13 +238,13 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         TechConditionExecutionEntity execution = decision.getTechConditionExecution();
         TechConditionEntity techCondition = execution.getTechCondition();
 
-        checkState(decision, execution, Event.TCE_TAKE_TO_EXECUTION);
+        decisionCheckState(decision, execution, Event.TCE_TAKE_TO_EXECUTION);
+
+        decisionChangeState(decision, execution, Event.TCE_TAKE_TO_EXECUTION);
 
         CurrentUserResponse currentUser = currentUserApiService.getCurrentUser();
         decision.setExecutor(externalUserMapper.fromCurrentUserResponse(currentUser));
         decision.setAssignees(List.of(currentUser.getId()));
-
-        changeState(decision, execution, Event.TCE_TAKE_TO_EXECUTION);
 
         abdAddressDecisionRepository.save(decision);
 
@@ -228,14 +258,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             executionRepository.save(execution);
 
             if (techCondition.getStatusCode().equals(Status.ASSIGNED.getCode())) {
-                try {
-                    techConditionStatemachine.changeState(
-                            techCondition, execution,
-                            techCondition.getStatusCode(), Event.TAKE_TO_EXECUTION);
-                } catch (UnknownStateException | UnknownEventException | GuardException e) {
-                    log.error("TC [CHANGE-STATE ERROR]: {}", e.getMessage());
-                    throw new BadRequestException(e.getMessage());
-                }
+                changeState(techCondition, execution, Event.TAKE_TO_EXECUTION);
                 techConditionRepository.save(techCondition);
             }
         }
@@ -252,9 +275,9 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
         }
 
-        checkState(decision, execution, Event.TCE_SEND_FOR_REVISION);
+        decisionCheckState(decision, execution, Event.TCE_SEND_FOR_REVISION);
 
-        changeState(decision, execution, Event.TCE_SEND_FOR_REVISION);
+        decisionChangeState(decision, execution, Event.TCE_SEND_FOR_REVISION);
 
         decision.setRevisionReason(reason);
 
@@ -274,9 +297,9 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
         }
 
-        checkState(decision, execution, Event.TCE_SEND_FOR_APPROVAL);
+        decisionCheckState(decision, execution, Event.TCE_SEND_FOR_APPROVAL);
 
-        changeState(decision, execution, Event.TCE_SEND_FOR_APPROVAL);
+        decisionChangeState(decision, execution, Event.TCE_SEND_FOR_APPROVAL);
 
         List<UUID> assignees = dto.getExecutors();
         decision.setAssignees(assignees);
@@ -291,9 +314,9 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         TechConditionExecutionEntity execution = decision.getTechConditionExecution();
         TechConditionEntity techCondition = execution.getTechCondition();
 
-        checkState(decision, execution, Event.TCE_APPROVE);
+        decisionCheckState(decision, execution, Event.TCE_APPROVE);
 
-        changeState(decision, execution, Event.TCE_APPROVE);
+        decisionChangeState(decision, execution, Event.TCE_APPROVE);
 
         CurrentUserResponse currentUser = currentUserApiService.getCurrentUser();
         decision.setManager(externalUserMapper.fromCurrentUserResponse(currentUser));
@@ -348,9 +371,9 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
         }
 
-        checkState(decision, execution, Event.TC_SEND_FOR_SIGN);
+        decisionCheckState(decision, execution, Event.TC_SEND_FOR_SIGN);
 
-        changeState(decision, execution, Event.TC_SEND_FOR_SIGN);
+        decisionChangeState(decision, execution, Event.TC_SEND_FOR_SIGN);
 
         List<UUID> assignees = new ArrayList<>(dto.getExecutors());
         UserDto userDto = userApiService.getUserById(assignees.get(0));
@@ -379,20 +402,28 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         TechConditionEntity techCondition = execution.getTechCondition();
 
         executionCheckState(techCondition, execution, Event.TC_SIGN);
-        checkState(decision, execution, Event.TC_SIGN);
+        decisionCheckState(decision, execution, Event.TC_SIGN);
 
         CurrentUserResponse currentUser = currentUserApiService.getCurrentUser();
         techCondition.setDirector(externalUserMapper.fromCurrentUserResponse(currentUser));
         techCondition.setDirectorSignedDatetime(OffsetDateTime.now());
 
-        TechConditionDecisionReportDto decisionReportData =
-                techConditionReportService.getDecisionReportDataByAddress(
-                        execution.getId(), decision.getObjectAbdAddress().getId());
-        sign.setBase64Data(reportTechConditionApiService.decisionBase64FromDto(
-                execution.getId(), decisionReportData, null));
+        if (isTrue(techCondition.getIsEpo())) {
+            var decisionReportData =
+                    techConditionEpoReportService.getDecisionReportDataByAddress(
+                            execution.getId(), decision.getObjectAbdAddress().getId());
+            sign.setBase64Data(reportTechConditionApiService.decisionBase64FromDto(
+                    execution.getId(), decisionReportData, null));
+        } else {
+            var decisionReportData =
+                    techConditionReportService.getDecisionReportDataByAddress(
+                            execution.getId(), decision.getObjectAbdAddress().getId());
+            sign.setBase64Data(reportTechConditionApiService.decisionBase64FromDto(
+                    execution.getId(), decisionReportData, null));
+        }
         registrySignApiService.addProviderSign(techCondition.getStatementId(), sign);
 
-        changeState(decision, execution, Event.TC_SIGN);
+        decisionChangeState(decision, execution, Event.TC_SIGN);
 
         if (decision.getDecisionType() == TECHNICAL_RECOMMENDATION && decision.getProject() != null) {
             decision.getProject().setStatusCode(ProjectStatus.SIGNED.getCode());
@@ -405,26 +436,8 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                 .existsByTechConditionExecutionIdAndStatusCodeNot(
                         execution.getId(), AbdAddressDecisionStatus.SIGNED.getCode());
 
-        /*if (allDecisionsSigned) {
-            execution.setStatusCode(ExecutionStatus.SIGNED.getCode());
-            executionRepository.save(execution);
-
-            // проверяем все ли executions подписаны
-            boolean allExecutionsSigned = !executionRepository
-                    .existsByTechConditionIdAndDeletedDatetimeIsNullAndStatusCodeIsNot(
-                            techCondition.getId(), ExecutionStatus.SIGNED.getCode());
-
-            if (allExecutionsSigned) {
-                techCondition.setStatusCode(Status.COMPLETED.getCode());
-            }
-        }*/
         if (allDecisionsSigned) {
-            try {
-                techConditionStatemachine.changeState(techCondition, execution, techCondition.getStatusCode(), Event.TC_SIGN);
-            } catch (UnknownStateException | UnknownEventException | GuardException e) {
-                log.error("TC [CHANGE-STATE ERROR]: {}", e.getMessage());
-                throw new BadRequestException(e.getMessage());
-            }
+            changeState(techCondition, execution, Event.TC_SIGN);
         }
 
         techConditionRepository.save(techCondition);
@@ -436,8 +449,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         kzharyqTechConditionService.sendCompletedRequest(techCondition);
     }
 
-    private void checkAndHandleAllApproved(TechConditionExecutionEntity execution,
-                                           TechConditionEntity techCondition) {
+    private void checkAndHandleAllApproved(TechConditionExecutionEntity execution, TechConditionEntity techCondition) {
         boolean allApproved = execution.getAbdAddressDecisions().stream()
                 .allMatch(d -> d.getStatusCode().equals(AbdAddressDecisionStatus.APPROVED.getCode()));
 
@@ -445,9 +457,9 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             ProviderDto providerDto = providerApiService.getProviderDto(techCondition.getProviderId());
 
             List<SubdivisionDto> subdivisions = Optional.ofNullable(
-                            providerApiService.getSubdivisionsByBinAndRole(
-                                    providerDto.getIinBin(),
-                                    AuthProviderSubDivisionRole.TC_EXECUTOR.toString()))
+                    providerApiService.getSubdivisionsByBinAndRole(
+                            providerDto.getIinBin(),
+                            AuthProviderSubDivisionRole.TC_EXECUTOR.toString()))
                     .filter(list -> !list.isEmpty())
                     .orElseThrow(() -> new NotFoundException(
                             "No subdivisions found with role = " + AuthProviderSubDivisionRole.TC_EXECUTOR));
@@ -469,8 +481,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             execution.setAssignees(assignees);
             executionRepository.save(execution);
 
-            log.info("DECISION [ALL APPROVED - RETURNED TO TC_EXECUTOR]: executionId=[{}]",
-                    execution.getId());
+            log.info("DECISION [ALL APPROVED - RETURNED TO TC_EXECUTOR]: executionId=[{}]", execution.getId());
         }
     }
 
@@ -502,7 +513,8 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     private void processAddressDecisions(TechConditionExecutionEntity execution,
                                          TechConditionEntity techCondition,
                                          List<TechConditionExecutionAbdAddressDecisionDto> addressDecisions) {
-        List<AbdAddressEntity> executionAddresses = abdAddressRepository.findAllByTechConditionExecutionId(execution.getId());
+        List<AbdAddressEntity> executionAddresses = abdAddressRepository
+                .findAllByTechConditionExecutionId(execution.getId());
         Set<UUID> validAddressIds = executionAddresses.stream()
                 .map(AbdAddressEntity::getId)
                 .collect(Collectors.toSet());
@@ -519,14 +531,18 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
                     .findByTechConditionExecutionIdAndObjectAbdAddressId(execution.getId(), addrDto.getAbdAddressId())
                     .orElseGet(() -> {
+                        CurrentUserResponse cu = currentUserApiService.getCurrentUser();
                         TechConditionExecutionAbdAddressDecisionEntity newDecision = new TechConditionExecutionAbdAddressDecisionEntity();
                         newDecision.setTechConditionExecution(execution);
                         newDecision.setObjectAbdAddress(findAddressById(addrDto.getAbdAddressId()));
-                        newDecision.setStatusCode(AbdAddressDecisionStatus.ASSIGNED.getCode());
+                        newDecision.setStatusCode(AbdAddressDecisionStatus.ON_EXECUTION.getCode());
+                        newDecision.setExecutor(externalUserMapper.fromCurrentUserResponse(cu));
+                        newDecision.setAssignees(new ArrayList<>(List.of(cu.getId())));
+                        newDecision.setRelatedUsers(new ArrayList<>(List.of(cu.getId())));
                         return newDecision;
                     });
 
-            checkState(decision, execution, Event.EXECUTE);
+            decisionCheckState(decision, execution, Event.EXECUTE);
 
             mapDtoToEntity(addrDto, decision);
 
@@ -535,7 +551,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                 decision.setReasonForRefusalDatetime(OffsetDateTime.now());
             }
 
-            changeState(decision, execution, Event.EXECUTE);
+            decisionChangeState(decision, execution, Event.EXECUTE);
 
             abdAddressDecisionRepository.save(decision);
         }
@@ -550,38 +566,27 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             TechConditionExecutionAbdAddressDecisionEntity decision = abdAddressDecisionRepository
                     .findByTechConditionExecutionIdAndObjectAbdAddressId(execution.getId(), address.getId())
                     .orElseGet(() -> {
+                        CurrentUserResponse cu = currentUserApiService.getCurrentUser();
                         TechConditionExecutionAbdAddressDecisionEntity newDecision = new TechConditionExecutionAbdAddressDecisionEntity();
                         newDecision.setTechConditionExecution(execution);
                         newDecision.setObjectAbdAddress(address);
-                        newDecision.setStatusCode(AbdAddressDecisionStatus.ASSIGNED.getCode());
+                        newDecision.setStatusCode(AbdAddressDecisionStatus.ON_EXECUTION.getCode());
+                        newDecision.setExecutor(externalUserMapper.fromCurrentUserResponse(cu));
+                        newDecision.setAssignees(new ArrayList<>(List.of(cu.getId())));
+                        newDecision.setRelatedUsers(new ArrayList<>(List.of(cu.getId())));
                         return newDecision;
                     });
 
-            checkState(decision, execution, Event.EXECUTE);
+            decisionCheckState(decision, execution, Event.EXECUTE);
 
-            decision.setDecisionType(dto.getDecisionType());
+            mapDtoToEntity(dto, decision);
 
-            if (TECHNICAL_RECOMMENDATION == dto.getDecisionType()) {
-                decision.setConnectionPoints(dto.getConnectionPoints());
-                decision.setConsider(dto.getConsider());
-                decision.setMeteringPointCode(dto.getMeteringPointCode());
-                decision.setInstalledTransformer(dto.getInstalledTransformer());
-                decision.setMaximumTransformerLoad(dto.getMaximumTransformerLoad());
-                decision.setExistsPlaceInstallMeteringDevice(dto.getExistsPlaceInstallMeteringDevice());
-                decision.setConnectionPointVoltage(dto.getConnectionPointVoltage());
-                decision.setConnectionPointVoltageLevel(dto.getConnectionPointVoltageLevel());
-                decision.setRequiredForConnection(dto.getRequiredForConnection());
-                decision.setRequirementsForOrganizationElectricityMetering(dto.getRequirementsForOrganizationElectricityMetering());
-            } else if (REASONED_REFUSAL == dto.getDecisionType()) {
-                decision.setRefusalReasonCode(dto.getRefusalReasonCode());
-                decision.setReasonForRefusalRu(dto.getReasonForRefusalRu());
-                decision.setReasonForRefusalKk(dto.getReasonForRefusalKk());
-                decision.setRefusalNumber(dto.getRefusalNumber());
+            if (REASONED_REFUSAL == dto.getDecisionType()) {
                 decision.setReasonForRefusalDatetime(OffsetDateTime.now());
                 generateRefusalRegistrationNumber(decision, techCondition);
             }
 
-            changeState(decision, execution, Event.EXECUTE);
+            decisionChangeState(decision, execution, Event.EXECUTE);
 
             abdAddressDecisionRepository.save(decision);
         }
@@ -628,7 +633,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
             throw new BadRequestException("Project already created for this address");
         }
 
-        checkState(techCondition, Event.TC_FORMATION_PROJECT);
+        checkState(techCondition, execution, Event.TC_FORMATION_PROJECT);
 
         TechConditionProjectEntity project = techConditionProjectService.create(techCondition, execution, buildProjectEntity(dto, decision));
 
@@ -648,12 +653,12 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
     private TechConditionProjectDto createProjectForExecution(TechConditionExecutionEntity execution,
                                                               TechConditionEntity techCondition,
                                                               TechConditionProjectCreateDto dto) {
-        checkState(techCondition, Event.TC_FORMATION_PROJECT);
+        checkState(techCondition, execution, Event.TC_FORMATION_PROJECT);
 
         TechConditionProjectDto project = techConditionProjectService.create(techCondition, execution, dto);
         TechConditionProjectDto registeredProject = techConditionProjectService.generateRegistrationNumber(project);
 
-        changeState(techCondition, Event.TC_FORMATION_PROJECT);
+        changeState(techCondition, execution, Event.TC_FORMATION_PROJECT);
 
         log.info("TECH CONDITION [PROJECT CREATED FOR EXECUTION]: executionId=[{}], projectId=[{}]",
                 execution.getId(), registeredProject.getId());
@@ -727,7 +732,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                 .allMatch(d -> d.getProject() != null);
 
         if (allProjectsCreated && !allDecisions.isEmpty()) {
-            changeState(techCondition, Event.TC_FORMATION_PROJECT);
+            changeState(techCondition, execution, Event.TC_FORMATION_PROJECT);
         }
     }
 
@@ -940,50 +945,30 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         }
     }
 
-//    private void validateAddressDecision(TechConditionExecutionAbdAddressDecisionDto dto, TechConditionExecutionEntity execution) {
-//        if (isNull(dto.getDecisionType())) {
-//            throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
-//        }
-//
-//        if (TECHNICAL_RECOMMENDATION == dto.getDecisionType()) {
-//            if (Boolean.TRUE.equals(execution.getIsParallel())) {
-//                if (StringUtils.isEmpty(dto.getConsider())) {
-//                    throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
-//                }
-//            } else {
-//                if (StringUtils.isEmpty(dto.getConnectionPoints())
-//                        || StringUtils.isEmpty(dto.getConsider())) {
-//                    throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
-//                }
-//            }
-//        }
-//
-//        if (REASONED_REFUSAL == dto.getDecisionType()) {
-//            if (StringUtils.isEmpty(dto.getRefusalReasonCode())
-//                    && (StringUtils.isEmpty(dto.getReasonForRefusalRu())
-//                    || StringUtils.isEmpty(dto.getReasonForRefusalKk()))) {
-//                throw new BadRequestException(ErrorCode.BAD_REQUEST.name());
-//            }
-//        }
-//    }
-//
-//    private void validateAllAddressesHaveDecisions(TechConditionExecutionEntity execution) {
-//        List<AbdAddressEntity> addresses = abdAddressRepository.findAllByTechConditionExecutionId(execution.getId());
-//        List<TechConditionExecutionAbdAddressDecisionEntity> decisions = findAllByExecutionId(execution.getId());
-//
-//        Set<UUID> decidedAddressIds = decisions.stream()
-//                .map(d -> d.getObjectAbdAddress().getId())
-//                .collect(Collectors.toSet());
-//
-//        boolean allHaveDecisions = addresses.stream()
-//                .allMatch(a -> decidedAddressIds.contains(a.getId()));
-//
-//        if (!allHaveDecisions) {
-//            throw new BusinessException(ErrorCode.DECISION_NOT_FORMED.name());
-//        }
-//    }
-
     private void mapDtoToEntity(TechConditionExecutionAbdAddressDecisionDto dto,
+                                TechConditionExecutionAbdAddressDecisionEntity entity) {
+        entity.setDecisionType(dto.getDecisionType());
+
+        if (TECHNICAL_RECOMMENDATION == dto.getDecisionType()) {
+            entity.setConnectionPoints(dto.getConnectionPoints());
+            entity.setMeteringPointCode(dto.getMeteringPointCode());
+            entity.setConsider(dto.getConsider());
+            entity.setInstalledTransformer(dto.getInstalledTransformer());
+            entity.setMaximumTransformerLoad(dto.getMaximumTransformerLoad());
+            entity.setExistsPlaceInstallMeteringDevice(dto.getExistsPlaceInstallMeteringDevice());
+            entity.setConnectionPointVoltage(dto.getConnectionPointVoltage());
+            entity.setConnectionPointVoltageLevel(dto.getConnectionPointVoltageLevel());
+            entity.setRequiredForConnection(dto.getRequiredForConnection());
+            entity.setRequirementsForOrganizationElectricityMetering(dto.getRequirementsForOrganizationElectricityMetering());
+        } else if (REASONED_REFUSAL == dto.getDecisionType()) {
+            entity.setRefusalReasonCode(dto.getRefusalReasonCode());
+            entity.setReasonForRefusalRu(dto.getReasonForRefusalRu());
+            entity.setReasonForRefusalKk(dto.getReasonForRefusalKk());
+            entity.setRefusalNumber(dto.getRefusalNumber());
+        }
+    }
+
+    private void mapDtoToEntity(TechConditionExecuteDto dto,
                                 TechConditionExecutionAbdAddressDecisionEntity entity) {
         entity.setDecisionType(dto.getDecisionType());
 
@@ -1016,6 +1001,8 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         try {
             ProviderDto provider = providerApiService.getProviderDto(techCondition.getProviderId());
 
+            boolean isEpo = isTrue(techCondition.getIsEpo());
+
             var consumer = consumerApiService.getConsumer(
                     techCondition.getConsumerIinBin(),
                     provider.getIinBin(),
@@ -1041,9 +1028,13 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                         String.format(
                                 TECH_RECOMMENDATION_SIGNED,
                                 stringOrEmpty(provider.getKk()),
+                                isEpo ? TC_EPO_SERVICE_NAME_KK : TC_SERVICE_NAME_KK,
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                LINK_DP,
                                 stringOrEmpty(provider.getRu()),
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                isEpo ? TC_EPO_SERVICE_NAME_RU : TC_SERVICE_NAME_RU,
+                                LINK_DP,
                                 executorFullName,
                                 providerContact
                         )
@@ -1056,9 +1047,13 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                         String.format(
                                 REASONED_REFUSAL_SIGNED,
                                 stringOrEmpty(provider.getKk()),
+                                isEpo ? TC_EPO_SERVICE_NAME_KK : TC_SERVICE_NAME_KK,
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                LINK_DP,
                                 stringOrEmpty(provider.getRu()),
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                isEpo ? TC_EPO_SERVICE_NAME_RU : TC_SERVICE_NAME_RU,
+                                LINK_DP,
                                 executorFullName,
                                 providerContact
                         )
@@ -1071,9 +1066,13 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                         String.format(
                                 TECH_RECOMMENDATION_SIGNED,
                                 stringOrEmpty(provider.getKk()),
+                                isEpo ? TC_EPO_SERVICE_NAME_KK : TC_SERVICE_NAME_KK,
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                LINK_DP,
                                 stringOrEmpty(provider.getRu()),
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                isEpo ? TC_EPO_SERVICE_NAME_RU : TC_SERVICE_NAME_RU,
+                                LINK_DP,
                                 executorFullName,
                                 providerContact
                         )
@@ -1083,9 +1082,13 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                         String.format(
                                 REASONED_REFUSAL_SIGNED,
                                 stringOrEmpty(provider.getKk()),
+                                isEpo ? TC_EPO_SERVICE_NAME_KK : TC_SERVICE_NAME_KK,
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                LINK_DP,
                                 stringOrEmpty(provider.getRu()),
                                 stringOrEmpty(techCondition.getStatementRegistrationNumber()),
+                                isEpo ? TC_EPO_SERVICE_NAME_RU : TC_SERVICE_NAME_RU,
+                                LINK_DP,
                                 executorFullName,
                                 providerContact
                         )
@@ -1113,8 +1116,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESOURCE_NOT_FOUND.name()));
     }
 
-    private void checkState(TechConditionExecutionAbdAddressDecisionEntity decision,
-                            TechConditionExecutionEntity execution, Event event) {
+    private void decisionCheckState(TechConditionExecutionAbdAddressDecisionEntity decision, TechConditionExecutionEntity execution, Event event) {
         log.info("DECISION [CHECK-STATE]: status=[{}], event=[{}]", decision.getStatusCode(), event);
         try {
             decisionStatemachine.checkState(decision, execution, decision.getStatusCode(), event);
@@ -1124,8 +1126,7 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         }
     }
 
-    private void changeState(TechConditionExecutionAbdAddressDecisionEntity decision,
-                             TechConditionExecutionEntity execution, Event event) {
+    private void decisionChangeState(TechConditionExecutionAbdAddressDecisionEntity decision, TechConditionExecutionEntity execution, Event event) {
         log.info("DECISION [CHANGE-STATE]: status=[{}], event=[{}]", decision.getStatusCode(), event);
         try {
             decisionStatemachine.changeState(decision, execution, decision.getStatusCode(), event);
@@ -1135,14 +1136,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         }
     }
 
-    private void checkState(TechConditionEntity entity, Event event) {
+    private void checkState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
         try {
             if (entity.getIsEpo()) {
                 log.info("TECH CONDITION EPO [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
-                techConditionEpoStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+                techConditionEpoStatemachine.checkState(entity, execution, entity.getStatusCode(), event);
             } else {
                 log.info("TECH CONDITION [CHECK-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
-                techConditionStatemachine.checkState(entity, null, entity.getStatusCode(), event);
+                techConditionStatemachine.checkState(entity, execution, entity.getStatusCode(), event);
             }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION [CHECK-STATE]: error message = {}", e.getMessage());
@@ -1150,14 +1151,14 @@ public class TechConditionExecutionAbdAddressDecisionServiceImpl implements Tech
         }
     }
 
-    private void changeState(TechConditionEntity entity, Event event) {
+    private void changeState(TechConditionEntity entity, TechConditionExecutionEntity execution, Event event) {
         try {
             if (entity.getIsEpo()) {
                 log.info("TECH CONDITION EPO [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
-                techConditionEpoStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+                techConditionEpoStatemachine.changeState(entity, execution, entity.getStatusCode(), event);
             } else {
                 log.info("TECH CONDITION [CHANGE-STATE]: status = [{}], event = [{}]", entity.getStatusCode(), event);
-                techConditionStatemachine.changeState(entity, null, entity.getStatusCode(), event);
+                techConditionStatemachine.changeState(entity, execution, entity.getStatusCode(), event);
             }
         } catch (UnknownStateException | UnknownEventException | GuardException e) {
             log.error("TECH CONDITION [CHANGE-STATE]: error message = {}", e.getMessage());

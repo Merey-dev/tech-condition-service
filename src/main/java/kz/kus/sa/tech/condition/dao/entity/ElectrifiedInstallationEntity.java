@@ -3,6 +3,8 @@ package kz.kus.sa.tech.condition.dao.entity;
 import kz.kus.sa.tech.condition.util.Constants;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.Where;
 
 import javax.persistence.*;
@@ -10,20 +12,17 @@ import javax.persistence.*;
 /**
  * Акт разграничение балансовой принадлежности
  */
-@Data
+@Getter
+@Setter
 @Entity
-@EqualsAndHashCode(callSuper = true)
 @Table(name = "electrified_installations", schema = Constants.SCHEMA_NAME)
 @Where(clause = "deleted_datetime is null")
 public class ElectrifiedInstallationEntity extends AbstractAuditingEntity {
 
     /** Акт разграничение балансовой принадлежности */
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "act_of_delineations_id",
-            referencedColumnName = "id",
-            table = "electrified_installations",
-            foreignKey = @ForeignKey(name = "fk_electrified_installations_act_of_delineations"),
-            nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "act_of_delineations_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_electrified_installations_act_of_delineations"))
     private ActOfDelineationEntity actOfDelineation;
 
     /** Наименование электрифицированных установок (объектов) и основных источников электроснабжения */

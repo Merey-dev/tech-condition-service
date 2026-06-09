@@ -8,6 +8,7 @@ import kz.kus.sa.registry.enums.RegistrationNumberActType;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationEntity;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalAbdAddressDecisionEntity;
 import kz.kus.sa.tech.condition.dao.entity.ActOfDelineationRenewalEntity;
+import kz.kus.sa.tech.condition.dao.mapper.ActOfDelineationAbdAddressMapper;
 import kz.kus.sa.tech.condition.dao.mapper.ActOfDelineationMapper;
 import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalAbdAddressDecisionRepository;
 import kz.kus.sa.tech.condition.dao.repository.ActOfDelineationRenewalRepository;
@@ -19,6 +20,7 @@ import kz.kus.sa.tech.condition.dto.act.ActOfDelineationUpdateDto;
 import kz.kus.sa.tech.condition.exception.ErrorCode;
 import kz.kus.sa.tech.condition.exception.NotFoundException;
 import kz.kus.sa.tech.condition.service.act.ActOfDelineationService;
+import kz.kus.sa.tech.condition.service.address.AbdAddressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,8 +44,10 @@ import static org.springframework.data.jpa.domain.Specification.where;
 @RequiredArgsConstructor
 public class ActOfDelineationServiceImpl implements ActOfDelineationService {
 
+    private final AbdAddressService abdAddressService;
     private final ProviderApiService providerApiService;
     private final ActOfDelineationMapper actOfDelineationMapper;
+    private final ActOfDelineationAbdAddressMapper abdAddressMapper;
     private final ActOfDelineationRepository actOfDelineationRepository;
     private final RegistryGenerateNumberApiService registryGenerateNumberApiService;
     private final ActOfDelineationRenewalRepository actOfDelineationRenewalRepository;
@@ -67,16 +71,19 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
         var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
         entity.setActOfDelineationRenewal(renewal);
 
-        // Привязка к decision: ищем decision по renewal + первому адресу из dto
         ActOfDelineationRenewalAbdAddressDecisionEntity decision = resolveDecisionForCreation(dto, renewal.getId());
         if (decision != null) {
             entity.setDecision(decision);
         }
 
-        // Сохраняем акт
+        if (entity.getElectrifiedInstallations() != null) {
+            ActOfDelineationEntity finalEntity = entity;
+            entity.getElectrifiedInstallations().forEach(ei -> ei.setActOfDelineation(finalEntity));
+        }
         entity = baseSave(entity);
 
-        // Привязываем decision к акту с обратной стороны
+        abdAddressService.saveList(null, abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
+
         if (decision != null) {
             decision.setActOfDelineation(entity);
             decisionRepository.save(decision);
@@ -100,6 +107,13 @@ public class ActOfDelineationServiceImpl implements ActOfDelineationService {
 
         var renewal = this.findRenewalById(dto.getActOfDelineationRenewalId());
         entity.setActOfDelineationRenewal(renewal);
+
+        if (entity.getElectrifiedInstallations() != null) {
+            ActOfDelineationEntity finalEntity = entity;
+            entity.getElectrifiedInstallations().forEach(ei -> ei.setActOfDelineation(finalEntity));
+        }
+
+        abdAddressService.saveList(entity.getObjectAbdAddresses(), abdAddressMapper.toEntityList(dto.getObjectAbdAddresses()), entity);
 
         entity = baseSave(entity);
         log.info("ACT OF DELINEATION [UPDATED]: id = [{}]", entity.getId());
